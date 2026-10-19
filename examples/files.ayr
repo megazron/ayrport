@@ -1,0 +1,11 @@
+# files.ayr — gate opens a resource and closes it after (with)
+load os, tempfile
+
+path = os.path.join(tempfile.gettempdir(), "ayrport_manifest.txt")
+
+gate open(path, "w") as f:
+    taxi seat, who in enumerate(["Ana", "Ben", "Cy"], 1):
+        f.write(f"{seat}: {who}\n")
+
+gate open(path) as f:
+    pa f.read(), end=""

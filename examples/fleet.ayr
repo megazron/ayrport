@@ -1,0 +1,37 @@
+# fleet.ayr — classes are hangars, `cap` (the captain) is self
+
+hangar Aircraft:
+    fly prep(cap, callsign, seats):
+        cap.callsign = callsign
+        cap.seats = seats
+        cap.onboard = []
+
+    fly board(cap, passenger):
+        clr len(cap.onboard) >= cap.seats:
+            sos OverbookedError(f"{cap.callsign} is full")
+        cap.onboard.append(passenger)
+
+    fly __repr__(cap):
+        land f"<{cap.callsign} {len(cap.onboard)}/{cap.seats}>"
+
+
+hangar Jumbo(Aircraft):
+    fly prep(cap, callsign):
+        super().prep(callsign, seats=3)
+
+
+hangar OverbookedError(Exception):
+    idle
+
+
+plane = Jumbo("AY101")
+taxi p in ["Ana", "Ben", "Cy", "Dee"]:
+    pre:
+        plane.board(p)
+        pa "boarded", p
+    mayday OverbookedError as e:
+        pa "MAYDAY:", e
+    post:
+        pa "  ", plane
+
+chk len(plane.onboard) == 3, "checklist: three on board"

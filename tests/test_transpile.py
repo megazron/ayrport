@@ -1,0 +1,106 @@
+import pytest
+
+from ayrport import transpile
+
+
+@pytest.mark.parametrize("ayr, py", [
+    ("clr x: idle", "if x: pass"),
+    ("alt x: idle", "elif x: pass"),
+    ("div: idle", "else: pass"),
+    ("hold go: abort", "while True: break"),
+    ("taxi i in rwy(3): around", "for i in range(3): continue"),
+    ("fly f(x): land x", "def f(x): return x"),
+    ("hangar A(B): idle", "class A(B): pass"),
+    ("pre: idle", "try: pass"),
+    ("mayday ValueError as e: sos", "except ValueError as e: raise"),
+    ("post: idle", "finally: pass"),
+    ("chk x, 'no'", "assert x, 'no'"),
+    ("gate open(p) as f: idle", "with open(p) as f: pass"),
+    ("f = jet x: x", "f = lambda x: x"),
+    ("drop 1", "yield 1"),
+    ("x = nil", "x = None"),
+    ("y = nogo", "y = False"),
+    ("a = 1 clr ok div 2", "a = 1 if ok else 2"),
+    ("fly prep(cap): idle", "def __init__(cap): pass"),
+    ("super().prep()", "super().__init__()"),
+])
+def test_keywords(ayr, py):
+    assert transpile(ayr) == py
+
+
+@pytest.mark.parametrize("ayr, py", [
+    ('pa "hi"', 'print("hi")'),
+    ("pa a, b, sep='-'", "print(a, b, sep='-')"),
+    ("pa", "print()"),
+    ("pa x  # note", "print(x)  # note"),
+    ("pa x; pa y", "print(x); print(y)"),
+    ("clr x: pa 'yes'", "clr x: pa 'yes'".replace("clr", "if").replace("pa 'yes'", "print('yes')")),
+    ("pa(1)", "print((1))"),
+    ("pa (1,\n    2)", "print((1,\n    2))"),
+    ("f = jet x: pa(x)", "f = lambda x: print(x)"),
+])
+def test_pa(ayr, py):
+    assert transpile(ayr) == py
+
+
+@pytest.mark.parametrize("ayr, py", [
+    ("load math", "import math"),
+    ("load numpy as np", "import numpy as np"),
+    ("load sqrt from math", "from math import sqrt"),
+    ("load sqrt, pi from math", "from math import sqrt, pi"),
+    ("load path as p from os", "from os import path as p"),
+    ("load x from .sibling", "from .sibling import x"),
+    ("load (a,\n b) from m", "from m import (a,\n b)"),
+    ("from math import tau", "from math import tau"),
+])
+def test_load(ayr, py):
+    assert transpile(ayr) == py
+
+
+def test_strings_and_comments_untouched():
+    src = 'x = "clr fly land pa"  # taxi hold abort\n'
+    assert transpile(src) == src
+
+
+def test_triple_quoted_string_untouched():
+    src = 'doc = """fly\nland\n"""\n'
+    assert transpile(src) == src
+
+
+def test_fstring_expressions_are_translated():
+    assert transpile('s = f"{a clr ok div b} land"') == 's = f"{a if ok else b} land"'
+    assert transpile("s = f'{{nil}} {nil}'") == "s = f'{{nil}} {None}'"
+
+
+def test_attribute_names_untouched():
+    assert transpile("plane.land()") == "plane.land()"
+    assert transpile("tower.go = 1") == "tower.go = 1"
+
+
+def test_line_numbers_preserved():
+    src = "load sqrt from math\nfly f(x):\n    pa x\n    land x\n"
+    assert transpile(src).count("\n") == src.count("\n")
+
+
+def test_assigning_to_pa_is_not_a_print():
+    assert transpile("pa = 3") == "print = 3"  # an alias, not a call
+
+
+def test_plain_python_still_works():
+    src = "def f(x):\n    if x:\n        return [i for i in range(x)]\n"
+    assert transpile(src) == src
+
+
+def test_standalone_header_for_wait():
+    assert transpile("wait(1)", standalone=True).startswith("from time import sleep as wait")
+    assert not transpile("pa 1", standalone=True).startswith("from")
+
+
+def test_vscode_words_match_language():
+    import json
+    from pathlib import Path
+
+    from ayrport import MEANINGS
+
+    words = Path(__file__).resolve().parent.parent / "vscode-extension" / "words.json"
+    assert json.loads(words.read_text(encoding="utf-8")) == MEANINGS

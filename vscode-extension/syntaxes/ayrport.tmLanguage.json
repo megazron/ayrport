@@ -1,0 +1,119 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Ayrport",
+  "scopeName": "source.ayrport",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#string" },
+    { "include": "#function-def" },
+    { "include": "#class-def" },
+    { "include": "#keywords" },
+    { "include": "#number" },
+    { "include": "#operator" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.number-sign.ayrport",
+      "match": "#.*$"
+    },
+    "string": {
+      "patterns": [
+        {
+          "name": "string.quoted.triple.ayrport",
+          "begin": "(?i)([rbuf]{0,2})(\"\"\"|''')",
+          "beginCaptures": { "1": { "name": "storage.type.string.ayrport" } },
+          "end": "\\2",
+          "patterns": [{ "include": "#escape" }, { "include": "#interpolation" }]
+        },
+        {
+          "name": "string.quoted.double.ayrport",
+          "begin": "(?i)([rbuf]{0,2})(\")",
+          "beginCaptures": { "1": { "name": "storage.type.string.ayrport" } },
+          "end": "(\")|(\\n)",
+          "patterns": [{ "include": "#escape" }, { "include": "#interpolation" }]
+        },
+        {
+          "name": "string.quoted.single.ayrport",
+          "begin": "(?i)([rbuf]{0,2})(')",
+          "beginCaptures": { "1": { "name": "storage.type.string.ayrport" } },
+          "end": "(')|(\\n)",
+          "patterns": [{ "include": "#escape" }, { "include": "#interpolation" }]
+        }
+      ]
+    },
+    "escape": {
+      "name": "constant.character.escape.ayrport",
+      "match": "\\\\."
+    },
+    "interpolation": {
+      "name": "meta.interpolation.ayrport",
+      "begin": "\\{(?!\\{)",
+      "end": "\\}",
+      "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.ayrport" } },
+      "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.ayrport" } },
+      "patterns": [{ "include": "#keywords" }, { "include": "#number" }]
+    },
+    "function-def": {
+      "match": "\\b(fly|def)\\s+([A-Za-z_]\\w*)",
+      "captures": {
+        "1": { "name": "storage.type.function.ayrport" },
+        "2": { "name": "entity.name.function.ayrport" }
+      }
+    },
+    "class-def": {
+      "match": "\\b(hangar|class)\\s+([A-Za-z_]\\w*)",
+      "captures": {
+        "1": { "name": "storage.type.class.ayrport" },
+        "2": { "name": "entity.name.type.class.ayrport" }
+      }
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.flow.ayrport",
+          "match": "\\b(clr|alt|div|hold|taxi|abort|around|land|drop|pre|mayday|post|sos|if|elif|else|while|for|break|continue|return|yield|try|except|finally|raise|await|async|match|case)\\b"
+        },
+        {
+          "name": "keyword.control.import.ayrport",
+          "match": "\\b(load|import|from|as)\\b"
+        },
+        {
+          "name": "keyword.other.ayrport",
+          "match": "\\b(gate|chk|idle|with|assert|pass|del|global|nonlocal)\\b"
+        },
+        {
+          "name": "storage.type.ayrport",
+          "match": "\\b(fly|hangar|jet|def|class|lambda)\\b"
+        },
+        {
+          "name": "keyword.operator.logical.ayrport",
+          "match": "\\b(and|or|not|in|is)\\b"
+        },
+        {
+          "name": "constant.language.ayrport",
+          "match": "\\b(go|nogo|nil|True|False|None)\\b"
+        },
+        {
+          "name": "support.function.builtin.ayrport",
+          "match": "\\b(pa|chkin|rwy|wait|print|input|range|len|str|int|float|list|dict|set|tuple|open|enumerate|zip|map|filter|sorted|sum|min|max|abs|round|isinstance|super|type)\\b"
+        },
+        {
+          "name": "entity.name.function.magic.ayrport",
+          "match": "\\bprep\\b"
+        },
+        {
+          "name": "variable.language.self.ayrport",
+          "match": "\\b(cap|self|cls)\\b"
+        }
+      ]
+    },
+    "number": {
+      "name": "constant.numeric.ayrport",
+      "match": "\\b(0[xX][0-9a-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+|\\d[\\d_]*(\\.[\\d_]*)?([eE][+-]?\\d+)?j?|\\.\\d[\\d_]*([eE][+-]?\\d+)?j?)\\b"
+    },
+    "operator": {
+      "name": "keyword.operator.ayrport",
+      "match": "(\\*\\*|//|==|!=|<=|>=|->|:=|[-+*/%@<>=&|^~])"
+    }
+  }
+}

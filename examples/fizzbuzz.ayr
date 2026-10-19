@@ -1,0 +1,6 @@
+# fizzbuzz.ayr — the classic, cleared for takeoff
+taxi n in rwy(1, 16):
+    clr n % 15 == 0: pa "FizzBuzz"
+    alt n % 3 == 0: pa "Fizz"
+    alt n % 5 == 0: pa "Buzz"
+    div: pa n

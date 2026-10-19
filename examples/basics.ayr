@@ -1,0 +1,56 @@
+# basics.ayr — the whole language on one runway
+
+load sqrt, pi from math
+load random
+
+# functions: fly ... land
+fly fuel_needed(km, burn=3.2):
+    land km * burn
+
+# if / elif / else: clr / alt / div
+fly status(delay):
+    clr delay == 0:
+        land "ON TIME"
+    alt delay < 30:
+        land "DELAYED"
+    div:
+        land "CANCELLED"
+
+# for: taxi ... in
+taxi d in [0, 12, 95]:
+    pa f"delay {d:>3} min -> {status(d)}"
+
+# while: hold
+altitude = 0
+hold altitude < 30000:
+    altitude += 10000
+    pa "climbing to", altitude
+
+# break / continue: abort / around
+taxi gate_no in rwy(1, 10):
+    clr gate_no % 2 == 0:
+        around
+    clr gate_no > 7:
+        abort
+    pa "odd gate", gate_no
+
+# lambdas: jet
+double = jet x: x * 2
+pa "double 21 =", double(21)
+
+# ternary: clr ... div
+fuel = fuel_needed(500)
+pa "fuel ok" clr fuel < 2000 div "need more fuel"
+
+# go / nogo / nil  (True / False / None)
+cleared = go
+pa "cleared:", cleared, "| nogo:", nogo, "| nil:", nil
+
+# generators: drop
+fly countdown(n):
+    hold n > 0:
+        drop n
+        n -= 1
+pa "countdown:", list(countdown(5))
+
+pa "sqrt(2) =", round(sqrt(2), 3), "pi =", round(pi, 3)

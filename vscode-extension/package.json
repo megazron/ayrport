@@ -1,0 +1,97 @@
+{
+  "name": "ayrport",
+  "displayName": "Ayrport",
+  "description": "Language support for Ayrport, the programming language spoken in airport and flight terms.",
+  "version": "1.0.0",
+  "publisher": "megazron",
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/megazron/ayrport"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": ["Programming Languages", "Snippets"],
+  "keywords": ["ayrport", "ayr", "airport", "language", "python"],
+  "main": "./extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "languages": [
+      {
+        "id": "ayrport",
+        "aliases": ["Ayrport", "ayr"],
+        "extensions": [".ayr"],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./images/file-icon.svg",
+          "dark": "./images/file-icon.svg"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ayrport",
+        "scopeName": "source.ayrport",
+        "path": "./syntaxes/ayrport.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "ayrport",
+        "path": "./snippets/ayrport.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "ayrport.run",
+        "title": "Ayrport: Run File",
+        "icon": "$(play)"
+      },
+      {
+        "command": "ayrport.showPython",
+        "title": "Ayrport: Show Compiled Python"
+      },
+      {
+        "command": "ayrport.tower",
+        "title": "Ayrport: Open Tower (REPL)"
+      }
+    ],
+    "menus": {
+      "editor/title/run": [
+        {
+          "command": "ayrport.run",
+          "when": "resourceLangId == ayrport"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "ayrport.run",
+          "when": "editorLangId == ayrport"
+        },
+        {
+          "command": "ayrport.showPython",
+          "when": "editorLangId == ayrport"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "ayrport.run",
+        "key": "f5",
+        "when": "editorLangId == ayrport && !inDebugMode"
+      }
+    ],
+    "configuration": {
+      "title": "Ayrport",
+      "properties": {
+        "ayrport.command": {
+          "type": "string",
+          "default": "ayr",
+          "description": "Command used to run Ayrport files. Use e.g. \"python -m ayrport\" if `ayr` is not on your PATH."
+        }
+      }
+    }
+  }
+}
