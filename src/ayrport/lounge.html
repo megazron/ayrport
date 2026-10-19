@@ -80,6 +80,24 @@ kbd { font: 600 12px var(--mono); border: 1px solid var(--line); border-bottom-w
 input[type=range] { accent-color: var(--amber); width: 100%; }
 label.slider { display: grid; grid-template-columns: 90px 1fr; gap: 10px; align-items: center; margin: 8px 0; }
 .big { font: 600 16px var(--ui); }
+#zone { position: absolute; left: 50%; top: 96px; transform: translateX(-50%); text-align: center; font: 800 34px var(--ui); letter-spacing: -.01em; text-shadow: 0 4px 24px rgba(0,0,0,.45); opacity: 0; pointer-events: none !important; white-space: nowrap; }
+#zone small { display: block; font: 700 11px var(--ui); letter-spacing: .3em; color: var(--amber); margin-bottom: 4px; }
+#zone.show { animation: zone 3.2s ease forwards; }
+@keyframes zone { 0% { opacity: 0; transform: translate(-50%, 10px); } 15%, 75% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -6px); } }
+#map { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); width: min(720px, calc(100vw - 40px)); height: 34px; padding: 4px; display: flex; gap: 3px; border-radius: 14px; }
+#map .seg { position: relative; display: grid; place-items: center; border-radius: 9px; background: rgba(255,255,255,.06); font: 700 10px var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); cursor: pointer; overflow: hidden; white-space: nowrap; transition: .2s; }
+#map .seg:hover { background: rgba(255,255,255,.12); color: var(--ink); }
+#map .seg.on { background: rgba(255,181,71,.18); color: var(--amber); }
+#map-dot { position: absolute; top: -5px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 3px rgba(255,181,71,.3), 0 0 14px var(--amber); pointer-events: none; transition: left .1s linear; }
+#quests { position: absolute; right: 20px; top: 84px; width: 250px; padding: 12px 14px; font-size: 12.5px; }
+#quests h4 { margin: 0 0 8px; font: 700 10px var(--ui); letter-spacing: .2em; text-transform: uppercase; color: var(--amber); }
+#quests div { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; color: var(--ink); }
+#quests div::before { content: ""; width: 7px; height: 7px; border-radius: 2px; border: 1.5px solid var(--amber); flex: none; transform: translateY(-1px); }
+#quests .prog { margin-left: auto; color: var(--muted); font: 600 11px var(--mono); }
+@media (max-width: 900px) { #quests { display: none; } }
+#fade { position: fixed; inset: 0; background: #05070d; opacity: 0; pointer-events: none; transition: opacity .4s; z-index: 6; }
+#fade.on { opacity: 1; }
+#flightbar { bottom: 70px !important; }
 #loading { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; background: radial-gradient(ellipse at center, #141c33, #05070d); z-index: 4; }
 @media (max-width: 600px) { #banner { right: 20px; } #tools { top: auto; bottom: 20px; right: 50%; transform: translateX(50%); } #flightbar { bottom: 84px; } }
 </style>
@@ -98,6 +116,9 @@ label.slider { display: grid; grid-template-columns: 90px 1fr; gap: 10px; align-
     <button id="t-help" title="How it works (?)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5V14M12 17.5v.01"/></svg></button>
   </div>
   <div id="prompt"></div>
+  <div id="zone"></div>
+  <div id="quests" class="glass"></div>
+  <div id="map" class="glass"></div>
   <div id="flightbar" class="glass">
     <div id="fb-top"><div id="fb-route"></div><div id="fb-label" class="muted"></div></div>
     <div id="fb-time">25:00</div>
@@ -107,6 +128,7 @@ label.slider { display: grid; grid-template-columns: 90px 1fr; gap: 10px; align-
   <div id="toast" class="glass"></div>
 </div>
 <div id="modal"><div class="card glass" id="card"></div></div>
+<div id="fade"></div>
 <script>
 "use strict";
 // ======================================================================= basics
@@ -122,7 +144,9 @@ const store = {
   save() { try { localStorage.setItem("ayr.lounge", JSON.stringify(S)); } catch { /* private mode */ } },
 };
 const SECRETS = { piano: "🎹 Played the lounge piano", chord: "🎼 Found the tower chord", cat: "🐈 Petted the airport cat",
-  vending: "🥤 Got a fortune", suitcase: "🧳 Returned a lost suitcase", coffee: "☕ Brewed a coffee", plane: "🛩 Threw a paper plane", radio: "📻 Tuned the radio", hela: "✨ Boarded as Hela" };
+  vending: "🥤 Got a fortune", suitcase: "🧳 Returned a lost suitcase", coffee: "☕ Brewed a coffee", plane: "🛩 Threw a paper plane", radio: "📻 Tuned the radio", hela: "✨ Boarded as Hela",
+  checkin: "🖨 Checked in", scanner: "🚨 Cleared security", foodie: "🍜 Ate at the food court", souvenir: "🛍 Bought a souvenir", social: "💬 Talked to everyone",
+  lounge: "🛋 Relaxed in the Sky Lounge", carousel: "🧳 Grabbed your bag", roof: "🌇 Found the rooftop", spotter: "🔭 Spotted 5 planes", postcards: "✉️ Collected all postcards" };
 
 // ======================================================================= airports
 // iata, name, city, country, lat, lon, timezone, scenery (c city, m mountains, s sea, d desert, f forest)
@@ -644,17 +668,6 @@ function land() {
 }
 let layover = 0;
 const stampColor = (iata) => ["#ffb547", "#5aa9ff", "#ef6f6c", "#6ee7a8", "#c792ea", "#5eead4"][hashStr(iata) % 6];
-function openPassport() {
-  const uniq = [...new Map(S.stamps.map((s) => [s.iata, s])).values()];
-  const h = Math.floor(S.minutes / 60), m = S.minutes % 60;
-  modal(`<h2>🛂 Passport · ${esc(S.name || "Traveller")}</h2><p class="muted">Home ${S.home || "—"} · now in ${airport.city}</p>
-    <div class="stats"><div><b>${h}h ${m}m</b>focus time</div><div><b>${S.flights}</b>flights</div><div><b>${S.km.toLocaleString()}</b>km flown</div><div><b>${S.streak || 0}</b>day streak</div></div>
-    <h3>Stamps</h3><div class="stamps">${uniq.length ? uniq.map((s) => `<div class="stamp" title="${BY_IATA[s.iata]?.city} · ${s.date}" style="--r:${(hashStr(s.iata) % 30) - 15}deg;color:${stampColor(s.iata)}">${s.iata}</div>`).join("") : '<span class="muted">Finish a focus flight at Gate A7 to get your first stamp.</span>'}</div>
-    <h3>Secrets found · ${S.secrets.length}/${Object.keys(SECRETS).length}</h3><div class="secrets">${Object.entries(SECRETS).map(([k, v]) => `<span>${S.secrets.includes(k) ? v : "❔ ???"}</span>`).join("")}</div>
-    <div class="row"><button class="btn" id="pp-move">Change airport</button><button class="btn" onclick="closeModal()">Close</button></div>`, () => {
-    $("#pp-move").onclick = () => openSplash();
-  });
-}
 function openSound() {
   modal(`<h2>♪ Sound</h2><p class="muted">The music is generated live, so it never repeats.</p>
     <label class="slider">Music <input type="range" id="v-music" min="0" max="1" step="0.05" value="${S.music}"></label>
@@ -721,7 +734,8 @@ async function fetchWeather() {
 
 // ======================================================================= modern 2D engine
 const cv = $("#c"), ctx = cv.getContext("2d");
-const LH = 720, WW = 3600, FLOOR = 520, GLASS_TOP = 64;
+const LH = 720, FLOOR = 520, GLASS_TOP = 64;
+let WW = 9600;
 let DPR = 1, SC = 1, VW = 1280, camX = 0, now = 0, hour = 12, light = 1;
 let keys = {}, zen = false;
 const me = { x: 980, base: 668, dir: 1, phase: 0, target: null, after: null, blink: 0 };
@@ -824,58 +838,6 @@ function airliner(x, y, s, livery, dir = 1, opt = {}) {
   ctx.restore();
 }
 
-// ---------------------------------------------------------------- world generation
-function buildScene() {
-  const r = rng(hashStr(airport.iata + today())), sr = rng(hashStr(airport.iata));
-  const W = { far: [], mid: [], city: [], trees: [], dunes: null, clouds: [], stars: [] };
-  for (let i = 0; i < 160; i++) W.stars.push([sr() * 4000, sr() * 380, sr()]);
-  for (let i = 0; i < 14; i++) W.clouds.push({ x: sr() * 5000, y: 70 + sr() * 220, s: 0.6 + sr() * 1.1, v: 4 + sr() * 8, k: Math.floor(sr() * CLOUDS.length) });
-  const sc = airport.scene;
-  const ridge = (count, h0, h1, base, jag) => { const p = new Path2D(); p.moveTo(-200, base); let x = -200; while (x < 4200) { const w = 120 + sr() * 260, h = h0 + sr() * (h1 - h0); p.lineTo(x + w * 0.5, base - h); if (jag) p.lineTo(x + w * 0.62, base - h * 0.82); x += w; p.lineTo(x, base - h * 0.15 * sr()); } p.lineTo(4200, base); p.closePath(); return p; };
-  if (sc === "m") { W.far.push(ridge(0, 160, 300, 452, true)); W.mid.push(ridge(0, 70, 170, 452, true)); W.snow = true; }
-  else if (sc === "d") { const p = new Path2D(); p.moveTo(-200, 452); for (let x = -200; x <= 4200; x += 40) p.lineTo(x, 452 - 30 - Math.sin(x / 260) * 18 - Math.sin(x / 90) * 6); p.lineTo(4200, 452); p.closePath(); W.dunes = p; }
-  else if (sc === "f") { const p = new Path2D(); for (let x = -200; x < 4200; x += 14 + sr() * 18) { const h = 18 + sr() * 30; p.moveTo(x - 9, 452); p.lineTo(x, 452 - h); p.lineTo(x + 9, 452); } W.trees.push(p); W.far.push(ridge(0, 30, 70, 452, false)); }
-  else if (sc === "s") { W.sea = true; W.far.push(ridge(0, 12, 40, 440, false)); }
-  else W.far.push(ridge(0, 20, 60, 452, false));
-  const towers = sc === "c" ? 1 : sc === "d" ? 0.3 : 0.5;
-  for (let x = -100; x < 4200;) { const w = 30 + sr() * 70, h = (sc === "c" ? 40 : 20) + sr() * (sc === "c" ? 180 : 80); if (sr() < towers) { const wins = []; for (let wy = 452 - h + 8; wy < 446; wy += 9) for (let wx = x + 5; wx < x + w - 5; wx += 8) if (sr() < 0.4) wins.push([wx, wy]); W.city.push({ x, w, h, wins, top: sr() < 0.2 }); } x += w + sr() * 30; }
-  world = W;
-  // furniture and easter eggs
-  objects = [];
-  add("board", 300, 600, 300, 230, "Departures board · your tasks", () => openBoard(), drawBoard);
-  add("seats", 640, 600, 300, 60, null, null, drawSeats);
-  add("gate", 1080, 600, 200, 120, "Board a focus flight", () => openGate(), drawGate);
-  add("seats", 1420, 600, 300, 60, null, null, drawSeats);
-  add("plant", 520, 606, 60, 120, null, null, drawPlant);
-  add("plant", 1900, 606, 60, 120, null, null, drawPlant);
-  add("bench", 2180, 610, 220, 50, null, null, drawBench);
-  add("radio", 3180, 610, 90, 80, "Tune the lounge radio", () => tuneRadio(), drawRadio);
-  add("shop", 3440, 600, 260, 300, null, null, drawShop);
-  const slots = [1700, 2420, 2680, 2920, 1260 + 0, 820].sort(() => r() - 0.5);
-  const eggs = [];
-  if (r() < 0.8) eggs.push("piano");
-  if (r() < 0.6) eggs.push("coffee");
-  if (r() < 0.55) eggs.push("vending");
-  if (r() < 0.5) eggs.push("suitcase");
-  if (r() < 0.5) eggs.push("paper");
-  if (eggs.length < 2) eggs.push(eggs.includes("piano") ? "coffee" : "piano");
-  const EGG = { piano: [230, 150, "Play the piano", () => openPiano(), drawPiano], coffee: [170, 190, "Brew a coffee", () => brewCoffee(), drawCoffee], vending: [90, 190, "Vending machine", () => vend(), drawVending],
-    suitcase: [50, 70, "A lost suitcase…", () => suitcase(), drawSuitcase], paper: [110, 100, "Fold a paper plane", () => throwPlane(), drawPaper] };
-  eggs.forEach((k, i) => { const [w, h, label, act, draw] = EGG[k]; add(k, slots[i], k === "suitcase" ? 660 : 604, w, h, label, act, draw); });
-  if (r() < 0.65) { const c = add("cat", 2200, 600, 70, 40, "A sleepy cat", () => petCat(), drawCat); c.name = pick(r, ["Mochi", "Captain Whiskers", "Biscuit", "Pixel", "Jet", "Noodle", "Kaya"]); }
-  // passengers
-  npcs = [];
-  for (let i = 0; i < 9; i++) npcs.push(newNpc(Math.random() * WW));
-  for (let i = 0; i < 4; i++) { const seat = objects.filter((o) => o.kind === "seats")[i % 2]; const n = newNpc(seat.x - 120 + Math.floor(Math.random() * 5) * 60); n.sitting = true; n.v = 0; n.base = 594; n.dir = Math.random() < 0.5 ? 1 : -1; npcs.push(n); }
-  planes = [];
-}
-function add(kind, x, base, w, h, label, act, draw) { const o = { kind, x, base, w, h, label, act, draw, t: 0 }; objects.push(o); return o; }
-function newNpc(x) {
-  const n = { x: x ?? (Math.random() < 0.5 ? -60 : WW + 60), base: 610 + Math.random() * 80, look: randomLook(), phase: Math.random() * 6, bag: Math.random() < 0.65 ? pick(Math.random, ["#3b4254", "#7d5a96", "#b5443c", "#2f6d73", "#c9a227", "#e8e1d0"]) : null };
-  n.v = (45 + Math.random() * 40) * (Math.random() < 0.5 ? -1 : 1); n.dir = Math.sign(n.v);
-  return n;
-}
-
 // ---------------------------------------------------------------- cloud sprites (pre-rendered once)
 const CLOUDS = [0, 1, 2, 3, 4, 5].map((k) => {
   const c = document.createElement("canvas"); c.width = 420; c.height = 170; const g = c.getContext("2d"), rnd = rng(k * 99 + 7);
@@ -930,7 +892,7 @@ function drawHorizon(top, bot) {
   ctx.restore();
   ctx.fillStyle = shade("#e2c64a"); ctx.fillRect(camX, 494, VW, 2);
   // control tower
-  ctx.save(); ctx.translate(camX * 0.6, 0); const tx = 2300;
+  ctx.save(); const tx = par(5600, 0.4);
   ctx.fillStyle = shade(haze("#cfd3d8", 0.2)); ctx.fillRect(tx - 9, 300, 18, 154); ctx.beginPath(); ctx.moveTo(tx - 34, 300); ctx.lineTo(tx + 34, 300); ctx.lineTo(tx + 26, 282); ctx.lineTo(tx - 26, 282); ctx.fill();
   ctx.fillStyle = night ? "#ffd27a" : shade("#3f6d94"); ctx.fillRect(tx - 26, 266, 52, 16); ctx.fillStyle = shade("#cfd3d8"); ctx.fillRect(tx - 30, 260, 60, 6); ctx.fillRect(tx - 1, 236, 2, 24);
   if (Math.floor(now / 800) % 2) glow(tx, 236, 12, "#ff4a4a", 1);
@@ -941,11 +903,8 @@ function drawHorizon(top, bot) {
   for (const p of planes) airliner(p.x, p.y, 0.32, p.livery, 1, { climb: p.climb, air: p.y < 452, night: light < 0.5, tint, tintA: 0.35 });
   ctx.restore();
   // parked aircraft at the gates, close to the glass
-  ctx.save(); ctx.translate(camX * 0.25, 0);
-  for (const [px, liv] of [[1050, "#ffb547"], [2050, "#2f6fd6"], [3000, "#d64545"]]) airliner(px + camX * 0 , 470, 0.95, liv, -1, { night: light < 0.5, tint, tintA: 0.25 });
-  // jet bridge to gate A7
-  ctx.fillStyle = shade("#b9bec7"); fillRR(1086, 405, 170, 52, 8, shade("#b9bec7")); ctx.fillStyle = shade("#8d939e"); ctx.fillRect(1086, 449, 170, 8); ctx.fillStyle = night ? rgba("#ffe2a6", 0.9) : shade("#5a6b84"); for (let i = 0; i < 5; i++) ctx.fillRect(1100 + i * 30, 418, 18, 14); ctx.fillStyle = shade("#6b717c"); ctx.fillRect(1196, 457, 10, 60); ctx.fillRect(1184, 506, 34, 10);
-  ctx.restore();
+  for (const [ax, liv] of [[3300, "#2aa876"], [GATE_X + 330, "#ffb547"], [6250, "#2f6fd6"], [7000, "#d64545"], [7900, "#7b4fd6"]]) airliner(par(ax, 0.82), 470, 0.95, liv, -1, { night: light < 0.5, tint, tintA: 0.25 });
+  if (level === "ground") { const bx = par(GATE_X + 180, 0.82), bw = par(GATE_X + 330, 0.82) - 160 - bx; ctx.fillStyle = shade("#b9bec7"); fillRR(bx, 405, Math.max(40, bw), 52, 8, shade("#b9bec7")); ctx.fillStyle = shade("#8d939e"); ctx.fillRect(bx, 449, Math.max(40, bw), 8); ctx.fillStyle = night ? rgba("#ffe2a6", 0.9) : shade("#5a6b84"); for (let i = 0; i < Math.max(1, bw / 32); i++) ctx.fillRect(bx + 12 + i * 30, 418, 18, 14); ctx.fillStyle = shade("#6b717c"); ctx.fillRect(bx + bw / 2, 457, 10, 60); }
   // ground vehicles
   ctx.save(); ctx.translate(camX * 0.3, 0);
   for (let i = 0; i < 2; i++) { const x = ((now / 1000 * (60 + i * 30) + i * 900) % (VW + 600)) - 300 + camX * 0.7; fillRR(x, 492, 46, 18, 4, shade(i ? "#f2c230" : "#e8e8e8")); fillRR(x + 26, 482, 18, 12, 3, shade("#2a3446")); ctx.fillStyle = "#1b1d24"; ctx.beginPath(); ctx.arc(x + 9, 511, 5, 0, 7); ctx.arc(x + 37, 511, 5, 0, 7); ctx.fill(); if (Math.floor(now / 400) % 2) glow(x + 34, 480, 8, "#ffb020", 1); }
@@ -978,12 +937,6 @@ function drawGlass() {
     if (drops.length < 90 && Math.random() < 0.5) drops.push({ x: camX + Math.random() * VW, y: GLASS_TOP + Math.random() * 300, v: 0, r: 1.5 + Math.random() * 2.5 });
     for (const d of drops) { if (Math.random() < 0.02) d.v = 40 + Math.random() * 80; d.y += d.v / 60; d.v *= 0.985; ctx.fillStyle = "rgba(220,235,255,.35)"; ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, 7); ctx.fill(); ctx.fillStyle = "rgba(255,255,255,.6)"; ctx.fillRect(d.x - d.r * 0.4, d.y - d.r * 0.5, 1.2, 1.2); if (d.v > 5) { ctx.fillStyle = "rgba(220,235,255,.12)"; ctx.fillRect(d.x - 0.6, d.y - 30, 1.2, 30); } }
     drops = drops.filter((d) => d.y < FLOOR && d.x > camX - 50 && d.x < camX + VW + 50);
-  }
-  // ceiling with light panels
-  ctx.fillStyle = vgrad(0, GLASS_TOP, [[0, mixHex("#e9e5dd", "#2a2e3a", 1 - light * 0.85)], [1, mixHex("#d6d1c6", "#1f232e", 1 - light * 0.85)]]); ctx.fillRect(camX, 0, VW, GLASS_TOP);
-  for (let x = Math.floor(camX / 320) * 320 + 80; x < camX + VW + 320; x += 320) {
-    fillRR(x - 60, GLASS_TOP - 14, 120, 8, 4, "#fff6e2");
-    if (light < 0.85) { ctx.globalCompositeOperation = "lighter"; const a = (1 - light) * 0.16; ctx.fillStyle = vgrad(GLASS_TOP, 700, [[0, `rgba(255,214,150,${a})`], [1, "rgba(255,214,150,0)"]]); ctx.beginPath(); ctx.moveTo(x - 60, GLASS_TOP - 6); ctx.lineTo(x + 60, GLASS_TOP - 6); ctx.lineTo(x + 200, 700); ctx.lineTo(x - 200, 700); ctx.fill(); ctx.globalCompositeOperation = "source-over"; }
   }
   // sun shafts through the glass in the day
   if (light > 0.3 && weather.code < 3) { ctx.globalCompositeOperation = "lighter"; for (let x = Math.floor(camX / 480) * 480; x < camX + VW + 480; x += 480) { ctx.fillStyle = `rgba(255,236,190,${0.05 * light})`; ctx.beginPath(); ctx.moveTo(x, GLASS_TOP); ctx.lineTo(x + 140, GLASS_TOP); ctx.lineTo(x + 420, LH); ctx.lineTo(x + 180, LH); ctx.fill(); } ctx.globalCompositeOperation = "source-over"; }
@@ -1085,11 +1038,455 @@ function drawCat(o) {
   if (Math.random() < 0.004) spawn("z", o.x + 60, 540);
 }
 
+// ---------------------------------------------------------------- open world: zones and levels
+const ZONES = [
+  { id: "checkin", name: "Check-in Hall", x1: 0, x2: 1900, type: "land" },
+  { id: "security", name: "Security", x1: 1900, x2: 2700, type: "wall" },
+  { id: "market", name: "Duty Free & Food Court", x1: 2700, x2: 4400, type: "air" },
+  { id: "gates", name: "Gates A1–A12", x1: 4400, x2: 7300, type: "air" },
+  { id: "lounge", name: "Sky Lounge", x1: 7300, x2: 8200, type: "air" },
+  { id: "arrivals", name: "Baggage Claim", x1: 8200, x2: 9600, type: "land" },
+];
+const STATIONS = [["Check-in Hall", 140], ["Food Court", 2770], ["Gates", 4500], ["Baggage Claim", 8300]];
+const GATE_X = 5100, WALK = [5700, 6500], SCANNER_X = 2350, LIFT_X = 6600, ROOF_LIFT_X = 300;
+const LEVELS = { ground: { objects: [], npcs: [], ww: 9600 }, roof: { objects: [], npcs: [], ww: 2600 } };
+let level = "ground", zoneNow = null, roofPlanes = [], scannerSide = null;
+const POSTCARDS = [
+  [0, "ground", 220, "“Day one. The check-in queue moved faster than my coffee kicked in.” — R."],
+  [1, "ground", 1160, "“Window seat secured. Everything else is a bonus.” — A."],
+  [2, "ground", 2120, "“Security took my snow globe. Worth it for the story.” — K."],
+  [3, "ground", 3090, "“Bought a postcard to send from the airport. Very meta.” — J."],
+  [4, "ground", 3590, "“The noodle bar here is the real destination.” — M."],
+  [5, "ground", 4730, "“Watched the sun rise over runway 27. Best alarm clock.” — S."],
+  [6, "roof", 2100, "“Up on the deck you can hear the engines in your chest.” — Jun"],
+  [7, "ground", 7560, "“Fell asleep by the aquarium. Dreamt I was a fish on holiday.” — L."],
+  [8, "ground", 8660, "“My bag came out first. First time in history.” — D."],
+  [9, "ground", 9520, "“Home again. The best part of any trip.” — you, someday"],
+];
+const TALK = {
+  nadia: ["Morning! Any bags to check?", "Window or aisle? Window. The view's the best part.", "Psst — there's a rooftop deck. Take the glass lift by the moving walkway.", "Find postcards around the terminal? Keep them. People collect them."],
+  lin: ["Laptops out, liquids in a clear bag, please.", "Belt and shoes too. Yes, the shoes.", "Yesterday someone packed a whole pineapple.", "Have a good flight. And breathe — you're through."],
+  rosa: ["Clear skies today. Perfect day to get some work done.", "Every flight starts with a checklist. Try one for your tasks.", "Twenty-five minutes is a short hop. Ninety is long-haul.", "Rumour has it there's a piano in here. Play C, E, G, C."],
+  ari: ["Neeeeeooowww! ✈", "My plane can do loops. Can yours?", "I saw a cat sleeping on a bench!", "When I grow up I'm flying the BIG ones."],
+  mo: ["One flat white, coming up.", "Our beans are roasted ten minutes from this runway.", "Coffee before a focus flight? Smart traveller.", "Try the local stall next door. Trust me."],
+  ivy: ["Mind the wet floor!", "I've found everything in these halls. Even a lost suitcase or two.", "Best sunset in the airport? The rooftop.", "Did you know the aquarium fish have names?"],
+  jun: ["That's a widebody on final. Look at those engines!", "Three thousand aircraft logged from this deck.", "The binoculars are free today. Go on.", "Night spotting is magic. All those runway lights."],
+};
+const DISH = { GB: "Fish & chips", IE: "Irish stew", US: "Burger & fries", CA: "Poutine", FR: "Croissant & café au lait", BE: "Belgian waffle", NL: "Stroopwafel", DE: "Pretzel & bratwurst", AT: "Schnitzel", CH: "Rösti",
+  IT: "Margherita pizza", ES: "Tapas plate", PT: "Pastel de nata", GR: "Souvlaki", TR: "Simit & tea", JP: "Tonkotsu ramen", CN: "Dumplings", HK: "Dim sum", TW: "Beef noodle soup", KR: "Bibimbap", IN: "Masala dosa",
+  PK: "Chicken biryani", BD: "Kacchi biryani", LK: "Hoppers & curry", NP: "Momos", AE: "Shawarma wrap", QA: "Machboos", SA: "Kabsa", JO: "Mansaf", EG: "Koshari", MA: "Tagine", TH: "Pad thai", VN: "Phở", SG: "Laksa",
+  MY: "Nasi lemak", ID: "Nasi goreng", PH: "Chicken adobo", MX: "Tacos al pastor", BR: "Pão de queijo", AR: "Empanadas", CL: "Pastel de choclo", PE: "Ceviche", CO: "Arepas", AU: "Meat pie", NZ: "Pavlova", ZA: "Bunny chow", KE: "Nyama choma", NG: "Jollof rice" };
+const BOOKS = [["The Long Layover", "“Some journeys are mostly waiting. The trick is to wait well.”"], ["Runway at Dawn", "“She landed before the city woke, and for an hour it was hers.”"],
+  ["Gate Changes", "“Plans move. You walk to the new gate anyway.”"], ["Notes from Seat 29D", "“Above the clouds, every problem is the size of a car below.”"], ["The Quiet Terminal", "“Nobody is in a hurry at 5 a.m. That's why it feels like home.”"]];
+const SOUVENIRS = () => [[`Mini ${airport.iata} jet model`, 300], [`${airport.city} snow globe`, 180], ["Pilot wings pin", 90], ["Postcard set", 60], ["Luggage tag", 50], ["Ayrport hoodie", 400]];
+const miles = () => 500 + Math.round(S.km) - (S.spent || 0);
+function par(anchor, p) { return anchor + (camX + VW / 2 - anchor) * (1 - p); }
+function zoneAt(x) { return ZONES.find((z) => x >= z.x1 && x < z.x2) || ZONES[ZONES.length - 1]; }
+
+// ---------------------------------------------------------------- world generation
+function buildScene() {
+  const r = rng(hashStr(airport.iata + today())), sr = rng(hashStr(airport.iata));
+  const W = { far: [], mid: [], city: [], trees: [], dunes: null, clouds: [], stars: [] };
+  for (let i = 0; i < 160; i++) W.stars.push([sr() * 4000, sr() * 380, sr()]);
+  for (let i = 0; i < 14; i++) W.clouds.push({ x: sr() * 5000, y: 70 + sr() * 220, s: 0.6 + sr() * 1.1, v: 4 + sr() * 8, k: Math.floor(sr() * CLOUDS.length) });
+  const sc = airport.scene;
+  const ridge = (h0, h1, base, jag) => { const p = new Path2D(); p.moveTo(-200, base); let x = -200; while (x < 5200) { const w = 120 + sr() * 260, h = h0 + sr() * (h1 - h0); p.lineTo(x + w * 0.5, base - h); if (jag) p.lineTo(x + w * 0.62, base - h * 0.82); x += w; p.lineTo(x, base - h * 0.15 * sr()); } p.lineTo(5200, base); p.closePath(); return p; };
+  if (sc === "m") { W.far.push(ridge(160, 300, 452, true)); W.mid.push(ridge(70, 170, 452, true)); W.snow = true; }
+  else if (sc === "d") { const p = new Path2D(); p.moveTo(-200, 452); for (let x = -200; x <= 5200; x += 40) p.lineTo(x, 452 - 30 - Math.sin(x / 260) * 18 - Math.sin(x / 90) * 6); p.lineTo(5200, 452); p.closePath(); W.dunes = p; }
+  else if (sc === "f") { const p = new Path2D(); for (let x = -200; x < 5200; x += 14 + sr() * 18) { const h = 18 + sr() * 30; p.moveTo(x - 9, 452); p.lineTo(x, 452 - h); p.lineTo(x + 9, 452); } W.trees.push(p); W.far.push(ridge(30, 70, 452, false)); }
+  else if (sc === "s") { W.sea = true; W.far.push(ridge(12, 40, 440, false)); }
+  else W.far.push(ridge(20, 60, 452, false));
+  const towers = sc === "c" ? 1 : sc === "d" ? 0.3 : 0.5;
+  for (let x = -100; x < 5200;) { const w = 30 + sr() * 70, h = (sc === "c" ? 40 : 20) + sr() * (sc === "c" ? 180 : 80); if (sr() < towers) { const wins = []; for (let wy = 452 - h + 8; wy < 446; wy += 9) for (let wx = x + 5; wx < x + w - 5; wx += 8) if (sr() < 0.4) wins.push([wx, wy]); W.city.push({ x, w, h, wins, top: sr() < 0.2 }); } x += w + sr() * 30; }
+  world = W;
+
+  // ground floor
+  LEVELS.ground.objects = objects = [];
+  STATIONS.forEach(([name, x]) => add("shuttle", x, 610, 70, 170, "Terminal shuttle", () => openShuttle(), drawShuttle));
+  add("board", 420, 600, 300, 230, "Departures board · your tasks", () => openBoard(), drawBoard);
+  ["AYR AIR", "SKYLINE", "NORTHWIND", "AERO " + airport.iata].forEach((n, i) => { const c = add("counter", 680 + i * 200, 600, 160, 110, null, null, drawCounter); c.name = n; c.col = ["#ffb547", "#4f8fe0", "#38b27c", "#e45d5d"][i]; });
+  talker("nadia", "Nadia · check-in", 880, 560, { skin: "#e3b48f", hair: "#2b1d14", hairStyle: "bun", top: "#4f8fe0", pants: "#1f2430", shoes: "#1b1b20", eyes: "#4a3424", female: true });
+  add("kiosk", 1450, 606, 70, 150, "Self check-in", () => kioskCheckin(), drawKiosk);
+  add("bagdrop", 1720, 606, 200, 80, null, null, drawBagDrop);
+  add("secwall", 2620, 600, 40, 300, null, null, () => {}).back = true;
+  add("xray", 2180, 606, 240, 120, null, null, drawXray);
+  add("scanner", SCANNER_X, 610, 70, 190, null, null, drawScanner);
+  talker("lin", "Officer Lin · security", 2480, 600, { skin: "#f2cfb3", hair: "#151515", hairStyle: "short", top: "#2f3e5c", pants: "#1f2430", shoes: "#1b1b20", eyes: "#3a2a1a", female: false });
+  const shop = (x, name, col, fg, label, act) => { const o = add("shopfront", x, 604, 230, 300, label, act, drawShopFront); o.name = name; o.col = col; o.fg = fg; return o; };
+  shop(2990, "SOUVENIRS", "#2f5d62", "#e8f6f3", "Browse souvenirs", () => openSouvenirs());
+  shop(3250, "BOOKS & MAPS", "#5a4632", "#ffe9c4", "Browse the bookshop", () => openBook());
+  shop(3510, "DUTY FREE", "#5a2f62", "#f6e8ff", "Try a perfume sample", () => perfume());
+  talker("ari", "Ari · future pilot", 3360, 680, { skin: "#c68a62", hair: "#151515", hairStyle: "curly", top: "#ffb547", pants: "#4a5f86", shoes: "#f4f1ea", eyes: "#3a2a1a", female: false }, 0.8);
+  const stall = (x, name, col, kind) => { const o = add("stall", x, 604, 190, 210, kind === "noodles" ? "Order at the noodle bar" : `Order ${DISH[airport.cc] || "the local special"}`, () => openFood(kind), drawStall); o.name = name; o.col = col; return o; };
+  stall(3790, "NOODLE BAR", "#c0392b", "noodles");
+  stall(4020, "LOCAL FLAVOURS", "#2a9d8f", "local");
+  add("table", 3900, 676, 160, 70, null, null, drawTable);
+  talker("mo", "Mo · barista", 4230, 600, { skin: "#9a6440", hair: "#2b1d14", hairStyle: "short", top: "#7b4a2f", pants: "#1f2430", shoes: "#1b1b20", eyes: "#3a2a1a", female: false });
+  add("plant", 4350, 606, 60, 120, null, null, drawPlant);
+  talker("rosa", "Captain Rosa · pilot", 4640, 600, { skin: "#f2cfb3", hair: "#4a2f1d", hairStyle: "bun", top: "#1f2a44", pants: "#1f2a44", shoes: "#1b1b20", eyes: "#2f5b7a", female: true, pilot: true });
+  add("seats", 4900, 600, 300, 60, null, null, drawSeats);
+  add("gate", GATE_X, 600, 200, 120, "Board a focus flight", () => openGate(), drawGate);
+  add("seats", 5450, 600, 300, 60, null, null, drawSeats);
+  add("plant", 5640, 606, 60, 120, null, null, drawPlant);
+  const wk = add("walkway", (WALK[0] + WALK[1]) / 2, 596, WALK[1] - WALK[0], 30, null, null, drawWalkway); wk.noReflect = true;
+  add("bench", 6100, 610, 220, 50, null, null, drawBench);
+  add("lift", LIFT_X, 606, 120, 500, "Glass lift · rooftop deck", () => takeLift("roof"), drawLift);
+  add("radio", 7200, 610, 90, 80, "Tune the lounge radio", () => tuneRadio(), drawRadio);
+  add("arch", 7330, 600, 60, 420, null, null, drawLoungeArch).back = true;
+  add("armchair", 7460, 610, 110, 110, "Sit in the armchair", (o) => sit(o), drawArmchair);
+  add("aquarium", 7640, 606, 200, 230, "Watch the aquarium", () => aquarium(), drawAquarium);
+  add("armchair", 7830, 610, 110, 110, "Sit in the armchair", (o) => sit(o), drawArmchair);
+  add("fireplace", 7990, 606, 160, 200, "Warm up by the fire", () => fireplace(), drawFireplace);
+  add("bookshelf", 8140, 606, 100, 260, "Pick a book", () => openBook(), drawBookshelf);
+  add("carousel", 8800, 640, 620, 70, "Grab your bag", () => grabBag(), drawCarousel).noReflect = true;
+  add("exit", 9260, 600, 170, 300, null, null, drawExit).back = true;
+  talker("ivy", "Ivy · keeps it shiny", 9400, 640, { skin: "#6e4529", hair: "#151515", hairStyle: "bob", top: "#38b27c", pants: "#2b3247", shoes: "#1b1b20", eyes: "#3a2a1a", female: true });
+  add("plant", 9530, 606, 60, 120, null, null, drawPlant);
+  // easter eggs scattered over the whole terminal, different every day
+  const slots = [6820, 7040, 4300, 1580, 8420].sort(() => r() - 0.5);
+  const eggs = [];
+  if (r() < 0.85) eggs.push("piano");
+  if (r() < 0.65) eggs.push("coffee");
+  if (r() < 0.6) eggs.push("vending");
+  if (r() < 0.55) eggs.push("suitcase");
+  if (r() < 0.55) eggs.push("paper");
+  if (eggs.length < 2) eggs.push(eggs.includes("piano") ? "coffee" : "piano");
+  const EGG = { piano: [230, 150, "Play the piano", () => openPiano(), drawPiano], coffee: [170, 190, "Brew a coffee", () => brewCoffee(), drawCoffee], vending: [90, 190, "Vending machine", () => vend(), drawVending],
+    suitcase: [50, 70, "A lost suitcase…", () => suitcase(), drawSuitcase], paper: [110, 100, "Fold a paper plane", () => throwPlane(), drawPaper] };
+  eggs.forEach((k, i) => { const [w, h, label, act, draw] = EGG[k]; add(k, slots[i], k === "suitcase" ? 660 : 604, w, h, label, act, draw); });
+  if (r() < 0.7) { const c = add("cat", 6100, 600, 70, 40, "A sleepy cat", () => petCat(), drawCat); c.name = pick(r, ["Mochi", "Captain Whiskers", "Biscuit", "Pixel", "Jet", "Noodle", "Kaya"]); }
+  for (const [id, lvl, x] of POSTCARDS) if (lvl === "ground" && !(S.postcards || []).includes(id)) { const p = add("postcard", x, 690, 40, 60, "Pick up a postcard", () => pickPostcard(p), drawPostcard); p.id = id; p.noReflect = true; }
+  // passengers
+  LEVELS.ground.npcs = npcs = [];
+  WW = LEVELS.ground.ww;
+  for (let i = 0; i < 26; i++) npcs.push(newNpc(Math.random() * WW));
+  const seatRows = objects.filter((o) => o.kind === "seats");
+  for (let i = 0; i < 4; i++) { const seat = seatRows[i % seatRows.length]; const n = newNpc(seat.x - 120 + Math.floor(Math.random() * 5) * 60); n.sitting = true; n.v = 0; n.base = 594; n.dir = Math.random() < 0.5 ? 1 : -1; npcs.push(n); }
+
+  // rooftop deck
+  const roofObjects = [];
+  objects = roofObjects;
+  add("lift", ROOF_LIFT_X, 606, 120, 500, "Glass lift · back to the gates", () => takeLift("ground"), drawLift);
+  add("roofsign", 560, 600, 200, 300, null, null, drawRoofSign).back = true;
+  add("bench", 760, 610, 220, 50, null, null, drawBench);
+  add("binoculars", 1050, 610, 60, 150, "Look through the binoculars", () => binoculars(), drawBinoculars);
+  add("telescope", 1350, 610, 80, 150, "Look through the telescope", () => telescope(), drawTelescope);
+  add("bench", 1600, 610, 220, 50, null, null, drawBench);
+  talker("jun", "Jun · plane spotter", 1820, 640, { skin: "#f2cfb3", hair: "#151515", hairStyle: "short", top: "#d9775b", pants: "#3b3f46", shoes: "#f4f1ea", eyes: "#3a2a1a", female: false, camera: true });
+  add("binoculars", 1980, 610, 60, 150, "Look through the binoculars", () => binoculars(), drawBinoculars);
+  add("windsock", 2400, 610, 80, 260, null, null, drawWindsock);
+  for (const [id, lvl, x] of POSTCARDS) if (lvl === "roof" && !(S.postcards || []).includes(id)) { const p = add("postcard", x, 690, 40, 60, "Pick up a postcard", () => pickPostcard(p), drawPostcard); p.id = id; p.noReflect = true; }
+  LEVELS.roof.objects = roofObjects;
+  LEVELS.roof.npcs = [];
+  for (let i = 0; i < 4; i++) { const n = newNpc(Math.random() * LEVELS.roof.ww); n.base = 640 + Math.random() * 40; LEVELS.roof.npcs.push(n); }
+  setLevel(level);
+  planes = []; roofPlanes = [];
+}
+function setLevel(l) { level = l; objects = LEVELS[l].objects; npcs = LEVELS[l].npcs; WW = LEVELS[l].ww; }
+function add(kind, x, base, w, h, label, act, draw) { const o = { kind, x, base, w, h, label, act: act ? () => act(o) : null, draw, t: 0 }; objects.push(o); return o; }
+function talker(id, name, x, base, look, s = 1.15) { const o = add("talker", x, base, 60, 170 * s, `Talk to ${name.split(" · ")[0]}`, () => talk(o), drawTalker); o.id = id; o.name = name; o.look = look; o.s = s; o.line = -1; return o; }
+function newNpc(x) {
+  const n = { x: x ?? (Math.random() < 0.5 ? -60 : WW + 60), base: 610 + Math.random() * 80, look: randomLook(), phase: Math.random() * 6, bag: Math.random() < 0.65 ? pick(Math.random, ["#3b4254", "#7d5a96", "#b5443c", "#2f6d73", "#c9a227", "#e8e1d0"]) : null };
+  n.v = (45 + Math.random() * 40) * (Math.random() < 0.5 ? -1 : 1); n.dir = Math.sign(n.v);
+  return n;
+}
+
+// ---------------------------------------------------------------- backdrops per zone
+function drawBackdrop(top, bot) {
+  drawSky(top, bot);
+  if (level === "roof") { drawRoofScene(top, bot); return; }
+  for (const z of ZONES) {
+    if (z.x2 < camX || z.x1 > camX + VW) continue;
+    ctx.save(); ctx.beginPath(); ctx.rect(z.x1, 0, z.x2 - z.x1, FLOOR + 4); ctx.clip();
+    if (z.type === "wall") drawInnerWall(z);
+    else { if (z.type === "air") drawHorizon(top, bot); else drawLandside(top, bot); drawWeather(); drawGlass(); }
+    ctx.restore();
+  }
+  drawCeiling(); drawFloor();
+}
+function drawInnerWall(z) {
+  const wall = mixHex("#e4e0d8", "#2a2d38", 1 - light * 0.8 - 0.05);
+  ctx.fillStyle = vgrad(GLASS_TOP, FLOOR, [[0, wall], [1, mixHex(wall, "#000000", 0.08)]]); ctx.fillRect(z.x1, 0, z.x2 - z.x1, FLOOR);
+  for (let x = z.x1 + 60; x < z.x2; x += 120) { ctx.fillStyle = rgba("#ffffff", 0.05 + light * 0.05); ctx.fillRect(x, GLASS_TOP + 20, 50, FLOOR - GLASS_TOP - 60); ctx.fillStyle = rgba("#000000", 0.05); ctx.fillRect(x + 50, GLASS_TOP + 20, 2, FLOOR - GLASS_TOP - 60); }
+  const cx = (z.x1 + z.x2) / 2;
+  fillRR(cx - 220, 150, 440, 90, 14, "#1d2433"); fillRR(cx - 220, 150, 12, 90, 6, "#ffb547");
+  ctx.fillStyle = "#f1ece0"; ctx.font = "800 30px Inter, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("SECURITY CHECKPOINT", cx + 6, 182);
+  ctx.fillStyle = "#9aa3b5"; ctx.font = "600 15px Inter, system-ui, sans-serif"; ctx.fillText("Laptops out · Liquids in a clear bag · Belts & shoes off", cx + 6, 216); ctx.textAlign = "left";
+  ctx.fillStyle = "#1d2433"; fillRR(z.x2 - 190, 280, 150, 50, 10, "#1d2433"); ctx.fillStyle = "#6ee7a8"; ctx.font = "800 18px Inter, system-ui, sans-serif"; ctx.fillText("AIRSIDE  →", z.x2 - 172, 305);
+}
+function drawLandside(top, bot) {
+  const darkness = 1 - (0.25 + light * 0.75), shade = (c) => mixHex(c, "#0b1028", darkness * 0.75), haze = (c, d) => mixHex(c, bot, d);
+  for (const p of world.far) layerFill(p, 0.1, shade(haze("#7d8aa4", 0.55)));
+  ctx.save(); ctx.translate(camX * 0.75, 0);
+  const night = light < 0.55, bcol = shade(haze("#6b7894", 0.4));
+  for (const b of world.city) { if (b.x + b.w < camX * 0.25 - 50 || b.x > camX * 0.25 + VW + 50) continue; ctx.fillStyle = bcol; ctx.fillRect(b.x, 452 - b.h, b.w, b.h); if (night) { ctx.fillStyle = "#ffd88a"; for (const [wx, wy] of b.wins) ctx.fillRect(wx, wy, 3, 4); } }
+  ctx.restore();
+  // car park, road and kerb
+  ctx.fillStyle = shade("#6f747c"); ctx.fillRect(camX, 440, VW, 30);
+  ctx.fillStyle = shade("#3a3d44"); ctx.fillRect(camX, 466, VW, 36);
+  ctx.fillStyle = rgba("#ffffff", 0.7); for (let x = Math.floor(camX / 70) * 70; x < camX + VW + 70; x += 70) ctx.fillRect(x, 483, 34, 2);
+  ctx.fillStyle = shade("#b9b3a6"); ctx.fillRect(camX, 502, VW, 18);
+  for (let x = Math.floor(camX / 260) * 260; x < camX + VW + 260; x += 260) { ctx.fillStyle = shade("#4b5260"); ctx.fillRect(x, 400, 4, 102); ctx.fillRect(x, 400, 26, 4); if (night) glow(x + 24, 404, 40, "#ffd9a0", 0.7); }
+  // traffic
+  const t = now / 1000;
+  for (let i = 0; i < 12; i++) {
+    const lane = i % 2, sp = (lane ? -1 : 1) * (70 + (i * 37) % 60), span = VW + 600, x = camX - 300 + ((t * sp + i * 331) % span + span) % span, y = lane ? 470 : 486;
+    const kind = i % 5 === 0 ? "bus" : i % 3 === 0 ? "taxi" : "car", col = kind === "taxi" ? "#f2c230" : kind === "bus" ? "#3a7bd5" : pick(rng(i + 9), ["#d9d9d9", "#c0392b", "#2c3e50", "#7f8c8d", "#e67e22", "#1f6f8b"]);
+    const w = kind === "bus" ? 110 : 54, h = kind === "bus" ? 30 : 18;
+    ctx.save(); ctx.translate(x, y); if (sp < 0) ctx.scale(-1, 1);
+    fillRR(0, -h, w, h, 6, shade(col)); fillRR(kind === "bus" ? 6 : 12, -h + 3, kind === "bus" ? w - 16 : 26, kind === "bus" ? 10 : 8, 3, night ? "#ffe2a6" : shade("#2a3446"));
+    ctx.fillStyle = "#15161a"; ctx.beginPath(); ctx.arc(12, 0, 5, 0, 7); ctx.arc(w - 12, 0, 5, 0, 7); ctx.fill();
+    if (night) { glow(w, -6, 30, "#fff2c0", 0.6); glow(0, -6, 10, "#ff4040", 0.7); }
+    if (kind === "taxi") { ctx.fillStyle = "#1b1b20"; ctx.fillRect(w / 2 - 8, -h - 5, 16, 5); }
+    ctx.restore();
+  }
+}
+function drawCeiling() {
+  ctx.fillStyle = vgrad(0, GLASS_TOP, [[0, mixHex("#e9e5dd", "#2a2e3a", 1 - light * 0.85)], [1, mixHex("#d6d1c6", "#1f232e", 1 - light * 0.85)]]); ctx.fillRect(camX, 0, VW, GLASS_TOP);
+  for (let x = Math.floor(camX / 320) * 320 + 80; x < camX + VW + 320; x += 320) {
+    fillRR(x - 60, GLASS_TOP - 14, 120, 8, 4, "#fff6e2");
+    if (light < 0.85) { ctx.globalCompositeOperation = "lighter"; const a = (1 - light) * 0.16; ctx.fillStyle = vgrad(GLASS_TOP, 700, [[0, `rgba(255,214,150,${a})`], [1, "rgba(255,214,150,0)"]]); ctx.beginPath(); ctx.moveTo(x - 60, GLASS_TOP - 6); ctx.lineTo(x + 60, GLASS_TOP - 6); ctx.lineTo(x + 200, 700); ctx.lineTo(x - 200, 700); ctx.fill(); ctx.globalCompositeOperation = "source-over"; }
+  }
+  // food court lanterns
+  const fz = ZONES[2];
+  if (camX < fz.x2 && camX + VW > fz.x1) for (let x = 3620; x < 4300; x += 90) { ctx.strokeStyle = "rgba(60,60,70,.6)"; ctx.beginPath(); ctx.moveTo(x, GLASS_TOP); ctx.lineTo(x, 120 + (x % 3) * 12); ctx.stroke(); const y = 130 + (x % 3) * 12; fillRR(x - 12, y - 12, 24, 30, 10, ["#e45d5d", "#ffb547", "#f4f1ea"][(x / 90) % 3 | 0]); if (light < 0.8) { ctx.globalCompositeOperation = "lighter"; glow(x, y + 3, 50, "#ffcf7a", 0.35); ctx.globalCompositeOperation = "source-over"; } }
+}
+function drawRoofScene(top, bot) {
+  drawHorizon(top, bot);
+  // big aircraft passing close to the deck
+  const tint = mixHex(bot, "#0b1028", (1 - (0.25 + light * 0.75)) * 0.6);
+  for (const p of roofPlanes) airliner(p.x, p.y, 0.85, p.livery, 1, { climb: p.climb, air: true, night: light < 0.5, tint, tintA: 0.2 });
+  // railing with string lights
+  ctx.fillStyle = rgba("#bcd4ea", 0.16); ctx.fillRect(camX, 430, VW, 90);
+  ctx.fillStyle = mixHex("#5b6370", "#1b1f28", 1 - light); ctx.fillRect(camX, 426, VW, 7); ctx.fillRect(camX, 516, VW, 6);
+  for (let x = Math.floor(camX / 160) * 160; x < camX + VW + 160; x += 160) ctx.fillRect(x, 426, 6, 96);
+  ctx.strokeStyle = "rgba(40,40,50,.6)"; ctx.lineWidth = 1.5; ctx.beginPath();
+  for (let x = Math.floor(camX / 80) * 80; x < camX + VW + 80; x += 80) { ctx.moveTo(x, 410); ctx.quadraticCurveTo(x + 40, 426, x + 80, 410); }
+  ctx.stroke();
+  for (let x = Math.floor(camX / 40) * 40; x < camX + VW + 40; x += 40) { const y = 410 + Math.sin(((x % 80) / 80) * Math.PI) * 8; const on = light < 0.8; ctx.fillStyle = on ? "#ffe2a0" : "#d9d2c0"; ctx.beginPath(); ctx.arc(x, y + 4, 3.5, 0, 7); ctx.fill(); if (on) { ctx.globalCompositeOperation = "lighter"; glow(x, y + 4, 18, "#ffcf7a", 0.6 * (1 - light)); ctx.globalCompositeOperation = "source-over"; } }
+  // wooden deck
+  const d1 = mixHex("#b58a5e", "#3b3040", 1 - light * 0.8 - 0.1), d2 = mixHex("#9c734b", "#2c2532", 1 - light * 0.8 - 0.1);
+  ctx.fillStyle = vgrad(FLOOR, LH, [[0, d2], [1, d1]]); ctx.fillRect(camX, FLOOR + 4, VW, LH - FLOOR);
+  ctx.strokeStyle = rgba("#000000", 0.12); ctx.beginPath(); for (let y = FLOOR + 16, i = 1; y < LH; y += 12 + i * 4, i++) { ctx.moveTo(camX, y); ctx.lineTo(camX + VW, y); } ctx.stroke();
+  // wind
+  ctx.strokeStyle = "rgba(255,255,255,.25)"; ctx.lineWidth = 1.2; ctx.beginPath();
+  for (let i = 0; i < 14; i++) { const x = camX + ((now / 4 + i * 211) % (VW + 200)) - 100, y = 120 + (i * 53) % 300; ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 30, y - 4, x + 60, y); }
+  ctx.stroke();
+}
+
+// ---------------------------------------------------------------- new furniture
+function drawShuttle(o) {
+  const x = o.x; shadow(x, 610, 40);
+  ctx.fillStyle = "#4b5260"; ctx.fillRect(x - 3, 450, 6, 160);
+  fillRR(x - 34, 440, 68, 90, 12, "#1d2433"); ctx.font = "26px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("🚆", x, 470);
+  ctx.fillStyle = "#ffb547"; ctx.font = "800 11px Inter, system-ui, sans-serif"; ctx.fillText("SHUTTLE", x, 500); ctx.fillStyle = "#9aa3b5"; ctx.font = "600 9px Inter, system-ui, sans-serif"; ctx.fillText("ALL ZONES", x, 515); ctx.textAlign = "left";
+}
+function drawCounter(o) {
+  const x = o.x; shadow(x, 604, 100);
+  fillRR(x - 80, 360, 160, 46, 8, "#1d2433"); fillRR(x - 80, 360, 10, 46, 5, o.col); ctx.fillStyle = "#f1ece0"; ctx.font = "800 17px Inter, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(o.name, x + 4, 383); ctx.textAlign = "left";
+  ctx.fillStyle = "#4b5260"; ctx.fillRect(x - 60, 406, 3, 120); ctx.fillRect(x + 57, 406, 3, 120);
+  fillRR(x - 76, 520, 152, 84, 8, mixHex("#39404d", "#232833", 1 - light)); fillRR(x - 82, 512, 164, 12, 6, "#ece6da"); fillRR(x - 50, 486, 40, 26, 4, "#0d0f14"); fillRR(x - 46, 490, 32, 18, 3, o.col);
+  ctx.fillStyle = "#6b717c"; for (let i = 0; i < 2; i++) { ctx.fillRect(x - 70 + i * 140 - 2, 640, 4, 40); ctx.beginPath(); ctx.arc(x - 70 + i * 140, 640, 5, 0, 7); ctx.fill(); }
+  ctx.strokeStyle = o.col; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 70, 646); ctx.quadraticCurveTo(x, 660, x + 70, 646); ctx.stroke();
+}
+function drawKiosk(o) { const x = o.x; shadow(x, 606, 40); fillRR(x - 30, 470, 60, 136, 10, "#e8e1d0"); fillRR(x - 24, 480, 48, 60, 6, "#0d0f14"); fillRR(x - 20, 484, 40, 52, 4, light < 0.6 ? "#3a7bd5" : "#2f6fd6"); ctx.fillStyle = "#fff"; ctx.font = "700 8px Inter, sans-serif"; ctx.textAlign = "center"; ctx.fillText("CHECK-IN", x, 505); ctx.fillText("TAP HERE", x, 520); ctx.textAlign = "left"; fillRR(x - 16, 552, 32, 6, 3, "#1b1b20"); }
+function drawBagDrop(o) { const x = o.x; shadow(x, 606, 110); fillRR(x - 100, 560, 200, 46, 8, "#4b5260"); ctx.fillStyle = "#2a2d34"; ctx.fillRect(x - 96, 552, 192, 10); ctx.fillStyle = "#6b717c"; for (let i = 0; i < 12; i++) ctx.fillRect(x - 96 + ((i * 16 + now / 20) % 192), 552, 2, 10); fillRR(x - 40, 520, 50, 34, 6, "#b5443c"); ctx.fillStyle = "#ffb547"; ctx.font = "800 12px Inter, sans-serif"; ctx.fillText("BAG DROP", x - 32, 590); }
+function drawXray(o) { const x = o.x; shadow(x, 606, 140); ctx.fillStyle = "#2a2d34"; ctx.fillRect(x - 130, 548, 260, 10); fillRR(x - 50, 470, 100, 90, 10, "#c9ced8"); fillRR(x - 40, 500, 80, 50, 6, "#1b1d24"); ctx.fillStyle = "rgba(255,255,255,.06)"; for (let i = 0; i < 6; i++) ctx.fillRect(x - 40 + i * 14, 500, 6, 50); fillRR(x - 120, 530, 50, 18, 4, "#3a4a6b"); fillRR(x + 70, 530, 50, 18, 4, "#3a4a6b"); ctx.fillStyle = "#6b717c"; ctx.fillRect(x - 126, 558, 6, 48); ctx.fillRect(x + 120, 558, 6, 48); fillRR(x + 60, 440, 50, 36, 4, "#0d0f14"); ctx.fillStyle = "#6ee7a8"; ctx.fillRect(x + 66, 446, 38, 24); }
+function drawScanner(o) { const x = o.x, beep = o.t > 0; if (beep) o.t -= 1 / 60; shadow(x, 610, 50); ctx.fillStyle = "#c9ced8"; fillRR(x - 40, 420, 14, 190, 4, "#c9ced8"); fillRR(x + 26, 420, 14, 190, 4, "#c9ced8"); fillRR(x - 40, 410, 80, 22, 6, "#c9ced8"); const c = beep ? (o.red ? "#ff4d4d" : "#4ade80") : "#7a8290"; fillRR(x - 14, 414, 28, 10, 4, c); if (beep) glow(x, 419, 40, o.red ? "#ff4d4d" : "#4ade80", 0.6); }
+function drawShopFront(o) {
+  const x = o.x - o.w / 2; shadow(o.x, 604, 120);
+  fillRR(x, 330, o.w, 274, 10, o.col); ctx.fillStyle = mixHex(o.col, "#000000", 0.35); ctx.fillRect(x, 330, o.w, 44);
+  ctx.fillStyle = o.fg; ctx.font = "800 18px Inter, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(o.name, o.x, 352); ctx.textAlign = "left";
+  fillRR(x + 14, 390, o.w - 28, 150, 6, mixHex("#fff4dc", "#ffd08a", 1 - light));
+  const items = o.name === "BOOKS & MAPS" ? ["#c0392b", "#2f6fd6", "#38b27c", "#e0a458", "#8f6ad8", "#2c3e50", "#d9775b"] : o.name === "DUTY FREE" ? ["#f6c1d9", "#c9a0ff", "#ffe08a", "#a0e8ff"] : ["#ffb547", "#5aa9ff", "#ef6f6c", "#6ee7a8", "#f4f1ea"];
+  if (o.name === "BOOKS & MAPS") items.forEach((c, i) => { fillRR(x + 30 + i * 24, 440 - (i % 3) * 8, 18, 70 + (i % 3) * 8, 2, c); });
+  else if (o.name === "DUTY FREE") items.forEach((c, i) => { fillRR(x + 36 + i * 44, 460, 24, 50, 6, c); fillRR(x + 42 + i * 44, 446, 12, 16, 3, "#c9a227"); });
+  else items.forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x + 46 + (i % 3) * 64, 440 + Math.floor(i / 3) * 56, 18, 0, 7); ctx.fill(); });
+  fillRR(o.x - 30, 540, 60, 64, 4, mixHex(o.col, "#000000", 0.25));
+  if (light < 0.7) { ctx.globalCompositeOperation = "lighter"; glow(o.x, 470, 180, "#ffd08a", 0.14 * (1 - light)); ctx.globalCompositeOperation = "source-over"; }
+}
+function drawStall(o) {
+  const x = o.x; shadow(x, 604, 110);
+  fillRR(x - 95, 380, 190, 40, 8, o.col); ctx.fillStyle = "#fff"; ctx.font = "800 15px Inter, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(o.name, x, 400); ctx.textAlign = "left";
+  fillRR(x - 80, 430, 160, 70, 6, "#1d2433"); ctx.fillStyle = "#ffb547"; ctx.font = "600 10px Inter, sans-serif"; const items = o.name === "NOODLE BAR" ? ["RAMEN", "UDON", "YAKISOBA"] : [plain(DISH[airport.cc] || "LOCAL SPECIAL").slice(0, 18), "FRESH JUICE", "DESSERT"]; items.forEach((it, i) => ctx.fillText(it, x - 70, 448 + i * 18));
+  fillRR(x - 90, 520, 180, 84, 8, mixHex("#7b4a2f", "#3a2418", 1 - light)); fillRR(x - 96, 512, 192, 12, 6, "#ece6da");
+  if (Math.random() < 0.03) spawn("steam", x - 40, 500);
+}
+function drawTable(o) { const x = o.x, b = o.base; person(x - 50, b - 2, 1.0, o.l1 || (o.l1 = randomLook()), 0, 0, 1, { sitting: true }); person(x + 50, b - 2, 1.0, o.l2 || (o.l2 = randomLook()), 0, 0, -1, { sitting: true }); shadow(x, b, 60); ctx.fillStyle = "#4b5260"; ctx.fillRect(x - 3, b - 46, 6, 46); fillRR(x - 46, b - 54, 92, 10, 5, "#ece6da"); fillRR(x - 20, b - 66, 14, 12, 3, "#f4f1ea"); fillRR(x + 8, b - 64, 18, 10, 4, "#c0392b"); }
+function drawWalkway(o) {
+  const x1 = WALK[0], x2 = WALK[1];
+  ctx.fillStyle = mixHex("#4b5260", "#1b1f28", 1 - light); fillRR(x1, 640, x2 - x1, 54, 10, ctx.fillStyle);
+  ctx.save(); rr(x1 + 8, 648, x2 - x1 - 16, 38, 6); ctx.clip(); ctx.fillStyle = mixHex("#6b717c", "#2a2e38", 1 - light); ctx.fillRect(x1, 648, x2 - x1, 38);
+  ctx.fillStyle = "rgba(0,0,0,.18)"; for (let x = x1 + ((now / 12) % 20); x < x2; x += 20) ctx.fillRect(x, 648, 3, 38); ctx.restore();
+  ctx.fillStyle = "#ffb547"; ctx.fillRect(x1 + 8, 646, 30, 4); ctx.fillRect(x2 - 38, 646, 30, 4);
+  ctx.fillStyle = "#6ee7a8"; ctx.font = "800 11px Inter, sans-serif"; ctx.fillText("▶▶  MOVING WALKWAY", x1 + 50, 668);
+}
+function drawLift(o) {
+  const x = o.x; ctx.fillStyle = mixHex("#9fc3e6", "#24364d", 1 - light); ctx.globalAlpha = 0.35; ctx.fillRect(x - 60, GLASS_TOP, 120, 546); ctx.globalAlpha = 1;
+  ctx.strokeStyle = mixHex("#5b6370", "#1b1f28", 1 - light); ctx.lineWidth = 6; ctx.strokeRect(x - 60, GLASS_TOP, 120, 546);
+  const cy = 420 + Math.sin(now / 2400) * 0; fillRR(x - 52, cy, 104, 186, 6, mixHex("#c9ced8", "#3a3f4c", 1 - light)); fillRR(x - 46, cy + 10, 92, 170, 4, mixHex("#d9eaf7", "#2f3b4f", 1 - light));
+  ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(x - 1, cy + 10, 2, 170);
+  fillRR(x - 46, cy - 40, 92, 30, 8, "#1d2433"); ctx.fillStyle = "#ffb547"; ctx.font = "800 11px Inter, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(level === "roof" ? "▼ GATES" : "▲ ROOFTOP", x, cy - 25); ctx.textAlign = "left";
+}
+function drawLoungeArch(o) { const x = o.x; ctx.fillStyle = "#3b2a22"; ctx.fillRect(x - 20, 180, 22, 430); fillRR(x - 20, 180, 260, 50, 10, "#3b2a22"); ctx.fillStyle = "#ffd9a0"; ctx.font = "800 20px Inter, system-ui, sans-serif"; ctx.fillText("SKY LOUNGE", x + 10, 212); ctx.fillStyle = mixHex("#7b4a2f", "#2a1a14", 1 - light); ctx.fillRect(x + 2, 600, 900, 4); }
+function drawArmchair(o) { const x = o.x; shadow(x, 610, 60); fillRR(x - 50, 520, 100, 70, 22, "#7b3b3b"); fillRR(x - 56, 548, 22, 52, 10, "#6a3232"); fillRR(x + 34, 548, 22, 52, 10, "#6a3232"); fillRR(x - 40, 566, 80, 26, 10, "#8d4646"); ctx.fillStyle = "#3b2a22"; ctx.fillRect(x - 44, 598, 6, 12); ctx.fillRect(x + 38, 598, 6, 12); }
+function drawAquarium(o) {
+  const x = o.x; shadow(x, 606, 110); fillRR(x - 100, 520, 200, 86, 8, "#3b2a22");
+  ctx.save(); rr(x - 96, 380, 192, 140, 8); ctx.clip(); ctx.fillStyle = vgrad(380, 520, [[0, "#3aa0c8"], [1, "#145a7a"]]); ctx.fillRect(x - 96, 380, 192, 140);
+  ctx.fillStyle = "rgba(255,255,255,.35)"; for (let i = 0; i < 8; i++) { const by = 520 - ((now / 30 + i * 37) % 140); ctx.beginPath(); ctx.arc(x - 70 + (i * 23) % 150, by, 2.5, 0, 7); ctx.fill(); }
+  for (let i = 0; i < 5; i++) { const fx_ = x + Math.sin(now / (1600 + i * 300) + i) * 70, fy = 410 + i * 22, d = Math.cos(now / (1600 + i * 300) + i) > 0 ? 1 : -1; ctx.fillStyle = ["#ff8a3d", "#ffd23d", "#ff5c8a", "#7ad7ff", "#ffffff"][i]; ctx.beginPath(); ctx.ellipse(fx_, fy, 10, 6, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.moveTo(fx_ - d * 9, fy); ctx.lineTo(fx_ - d * 17, fy - 6); ctx.lineTo(fx_ - d * 17, fy + 6); ctx.fill(); }
+  ctx.fillStyle = "#2f7a4a"; for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.ellipse(x - 80 + i * 32, 515, 5, 24 + (i % 3) * 8, Math.sin(now / 900 + i) * 0.2, 0, 7); ctx.fill(); }
+  ctx.restore(); ctx.strokeStyle = "#2a1d18"; ctx.lineWidth = 6; rr(x - 96, 380, 192, 140, 8); ctx.stroke();
+  ctx.globalCompositeOperation = "lighter"; glow(x, 450, 160, "#4ab8e8", 0.12); ctx.globalCompositeOperation = "source-over";
+}
+function drawFireplace(o) {
+  const x = o.x; shadow(x, 606, 90); fillRR(x - 80, 420, 160, 186, 8, "#5a4a42"); fillRR(x - 90, 410, 180, 16, 6, "#3b2a22"); fillRR(x - 50, 500, 100, 100, 50, "#1a1210");
+  for (let i = 0; i < 3; i++) { const f = Math.sin(now / 90 + i * 2) * 6; ctx.fillStyle = ["#ff7a1a", "#ffb547", "#ffe08a"][i]; ctx.beginPath(); ctx.moveTo(x - 30 + i * 8, 596); ctx.quadraticCurveTo(x - 20 + i * 10, 540 + f - i * 8, x + i * 4, 528 + f + i * 6); ctx.quadraticCurveTo(x + 22 - i * 6, 548 - f, x + 30 - i * 8, 596); ctx.fill(); }
+  ctx.globalCompositeOperation = "lighter"; glow(x, 560, 220 + Math.sin(now / 120) * 10, "#ff9a3d", 0.22); ctx.globalCompositeOperation = "source-over";
+}
+function drawBookshelf(o) { const x = o.x; shadow(x, 606, 60); fillRR(x - 50, 346, 100, 260, 6, "#4a3424"); for (let s = 0; s < 4; s++) { ctx.fillStyle = "#3b2a1e"; ctx.fillRect(x - 46, 360 + s * 62 + 50, 92, 6); for (let b = 0; b < 7; b++) fillRR(x - 42 + b * 12.5, 360 + s * 62 + (b % 3) * 3, 10, 50 - (b % 3) * 3, 1, ["#c0392b", "#2f6fd6", "#38b27c", "#e0a458", "#8f6ad8", "#f4f1ea", "#2c3e50"][(b + s) % 7]); } }
+const BAGS = ["#3b4254", "#b5443c", "#2f6d73", "#c9a227", "#7d5a96", "#e8e1d0", "#4a5f86", "#d9775b"];
+function drawCarousel(o) {
+  const x1 = o.x - o.w / 2, x2 = o.x + o.w / 2; shadow(o.x, 690, 330, 0.3);
+  fillRR(x1, 650, o.w, 40, 20, mixHex("#9aa1ab", "#3a3f4c", 1 - light)); fillRR(x1 + 10, 640, o.w - 20, 16, 8, mixHex("#3a3d44", "#1b1d24", 1 - light));
+  fillRR(o.x - 70, 360, 140, 40, 8, "#1d2433"); ctx.fillStyle = "#ffb547"; ctx.font = "800 15px Inter, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(`BELT 3 · ${S.flights ? "YOUR FLIGHT" : "AY 204"}`, o.x, 380); ctx.textAlign = "left";
+  ctx.fillStyle = "#4b5260"; ctx.fillRect(o.x - 2, 400, 4, 240);
+  if (!o.bags) o.bags = BAGS.map((c, i) => ({ c, off: i / BAGS.length, mine: i === 3 }));
+  for (const b of o.bags) { if (b.gone) continue; const bx = x1 + 30 + ((b.off + now / 60000) % 1) * (o.w - 60); b.x = bx; ctx.save(); ctx.translate(bx, 642); fillRR(-18, -40, 36, 40, 6, b.c); if (b.mine) { fillRR(-6, -50, 14, 12, 2, "#ffb547"); ctx.fillStyle = "#1b1203"; ctx.font = "800 7px Inter"; ctx.fillText((S.name || "YOU").slice(0, 3).toUpperCase(), -5, -42); } ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(-18, -8, 36, 4); ctx.restore(); }
+}
+function drawExit(o) { const x = o.x; fillRR(x - 85, 300, 170, 310, 8, mixHex("#4b5566", "#1e232d", 1 - light)); fillRR(x - 75, 340, 150, 270, 4, mixHex("#a8c3dd", "#2f3b4f", 1 - light)); ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(x - 1, 340, 2, 270); fillRR(x - 70, 300, 140, 30, 6, "#1d6b3c"); ctx.fillStyle = "#fff"; ctx.font = "800 14px Inter, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("EXIT · TAXIS 🚕", x, 315); ctx.textAlign = "left"; }
+function drawPostcard(o) { const x = o.x, y = o.base - 20 + Math.sin(now / 400 + o.id) * 4; ctx.globalCompositeOperation = "lighter"; glow(x, y, 36, "#ffd27a", 0.45); ctx.globalCompositeOperation = "source-over"; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(now / 700 + o.id) * 0.15); fillRR(-15, -10, 30, 20, 3, "#fffaf0"); ctx.fillStyle = "#e45d5d"; ctx.fillRect(6, -7, 6, 7); ctx.fillStyle = "#9aa3b5"; ctx.fillRect(-11, -4, 12, 1.5); ctx.fillRect(-11, 0, 14, 1.5); ctx.fillRect(-11, 4, 9, 1.5); ctx.restore(); }
+function drawTalker(o) {
+  const face = Math.abs(me.x - o.x) < 300 ? Math.sign(me.x - o.x) || 1 : (o.dir || 1);
+  person(o.x, o.base, o.s, o.look, now / 900, 0, face, { blink: (now + o.x) % 4600 < 120 });
+  if (o.look.pilot) { ctx.fillStyle = "#1f2a44"; fillRR(o.x - 19 * o.s, o.base - 160 * o.s, 38 * o.s, 10 * o.s, 4, "#1f2a44"); ctx.fillStyle = "#ffb547"; ctx.fillRect(o.x - 6 * o.s, o.base - 158 * o.s, 12 * o.s, 4 * o.s); }
+  if (o.look.camera) { fillRR(o.x + face * 10 - 9, o.base - 118 * o.s, 18, 12, 3, "#1b1b20"); }
+  if (o.id === "ari") { ctx.save(); ctx.translate(o.x + face * 22, o.base - 100 * o.s + Math.sin(now / 200) * 6); ctx.scale(face, 1); ctx.fillStyle = "#e45d5d"; ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(-12, -4); ctx.lineTo(-12, 4); ctx.fill(); ctx.fillRect(-4, -10, 4, 20); ctx.restore(); }
+  const near = Math.abs(me.x - o.x) < 90;
+  if (near || (o.sayUntil && now < o.sayUntil)) { ctx.font = "700 12px Inter, sans-serif"; const tw = ctx.measureText(o.name).width; fillRR(o.x - tw / 2 - 10, o.base - 200 * o.s - 28, tw + 20, 22, 11, "rgba(14,17,27,.75)"); ctx.fillStyle = "#ffb547"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(o.name, o.x, o.base - 200 * o.s - 17); ctx.textAlign = "left"; }
+  if (o.sayUntil && now < o.sayUntil) {
+    const text = TALK[o.id][o.line]; ctx.font = "500 14px Inter, system-ui, sans-serif";
+    const lines = wrap(text, 230), w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 28, h = lines.length * 19 + 18, bx = o.x - w / 2, by = o.base - 200 * o.s - 40 - h;
+    fillRR(bx, by, w, h, 14, "#fffaf0"); ctx.beginPath(); ctx.moveTo(o.x - 8, by + h); ctx.lineTo(o.x + 8, by + h); ctx.lineTo(o.x, by + h + 9); ctx.fillStyle = "#fffaf0"; ctx.fill();
+    ctx.fillStyle = "#1d2433"; ctx.textBaseline = "top"; lines.forEach((l, i) => ctx.fillText(l, bx + 14, by + 10 + i * 19));
+  }
+}
+function wrap(text, max) { const words = text.split(" "), out = []; let line = ""; for (const w of words) { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > max && line) { out.push(line); line = w; } else line = t; } out.push(line); return out; }
+function drawRoofSign(o) { const x = o.x; fillRR(x - 110, 300, 220, 70, 12, "#1d2433"); ctx.fillStyle = "#ffb547"; ctx.font = "800 18px Inter, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("OBSERVATION DECK", x, 325); ctx.fillStyle = "#9aa3b5"; ctx.font = "600 12px Inter, sans-serif"; ctx.fillText(`${airport.iata} · RUNWAY VIEW`, x, 350); ctx.textAlign = "left"; ctx.fillStyle = "#4b5260"; ctx.fillRect(x - 3, 370, 6, 240); }
+function drawBinoculars(o) { const x = o.x; shadow(x, 610, 30); ctx.fillStyle = "#4b5260"; ctx.fillRect(x - 4, 520, 8, 90); fillRR(x - 20, 604, 40, 8, 4, "#4b5260"); ctx.save(); ctx.translate(x, 505); ctx.rotate(-0.15); fillRR(-26, -14, 52, 28, 10, "#2f6fd6"); ctx.fillStyle = "#1b1b20"; ctx.beginPath(); ctx.arc(-26, -6, 8, 0, 7); ctx.arc(-26, 8, 8, 0, 7); ctx.fill(); ctx.restore(); }
+function drawTelescope(o) { const x = o.x; shadow(x, 610, 30); ctx.strokeStyle = "#4b5260"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, 520); ctx.lineTo(x - 26, 610); ctx.moveTo(x, 520); ctx.lineTo(x + 26, 610); ctx.moveTo(x, 520); ctx.lineTo(x, 610); ctx.stroke(); ctx.save(); ctx.translate(x, 515); ctx.rotate(-0.5); fillRR(-40, -9, 80, 18, 8, "#e8e1d0"); fillRR(28, -12, 16, 24, 6, "#c9a227"); ctx.restore(); }
+function drawWindsock(o) { const x = o.x; ctx.fillStyle = "#c9ced8"; ctx.fillRect(x - 3, 350, 6, 260); ctx.save(); ctx.translate(x, 356); ctx.rotate(Math.sin(now / 700) * 0.12 + 0.12); for (let i = 0; i < 5; i++) { ctx.fillStyle = i % 2 ? "#f4f1ea" : "#ff7a1a"; ctx.beginPath(); ctx.moveTo(i * 22, -14 + i * 2); ctx.lineTo(i * 22 + 22, -12 + i * 2.4); ctx.lineTo(i * 22 + 22, 12 - i * 2.4); ctx.lineTo(i * 22, 14 - i * 2); ctx.fill(); } ctx.restore(); }
+
+// ---------------------------------------------------------------- activities
+function talk(o) {
+  o.line = (o.line + 1) % TALK[o.id].length; o.sayUntil = now + 5200;
+  if (!(S.talked || []).includes(o.id)) { S.talked = [...(S.talked || []), o.id]; store.save(); if (S.talked.length === Object.keys(TALK).length) secret("social"); }
+}
+function fadeTo(fn) { const f = $("#fade"); f.classList.add("on"); setTimeout(() => { fn(); f.classList.remove("on"); }, 420); }
+function openShuttle() {
+  const here = zoneAt(me.x).name;
+  modal(`<h2>🚆 Terminal shuttle</h2><p class="muted">Every two minutes, all zones. Hop on.</p><div class="row">${STATIONS.map(([n, x]) => `<button class="btn ${zoneAt(x).name === here ? "sel" : ""}" data-go="${x}">${n}</button>`).join("")}</div><div class="row"><button class="btn" onclick="closeModal()">Stay here</button></div>`, () => {
+    document.querySelectorAll("[data-go]").forEach((b) => b.onclick = () => { closeModal(); chime([79, 76]); fadeTo(() => { me.x = +b.dataset.go + 90; camX = clamp(me.x - VW * 0.45, 0, WW - VW); }); });
+  });
+}
+function takeLift(to) {
+  chime([72, 79]); me.target = null;
+  fadeTo(() => { setLevel(to); me.x = to === "roof" ? ROOF_LIFT_X + 90 : LIFT_X + 90; camX = clamp(me.x - VW * 0.45, 0, WW - VW); if (to === "roof") { secret("roof"); setTimeout(() => toast("Observation deck. Mind the wind.", 3200), 500); } });
+}
+function kioskCheckin() {
+  const seat = `${1 + hashStr(S.name || "you") % 30}${"ACDF"[hashStr(S.name + "s") % 4]}`;
+  chime([76, 79]);
+  modal(`<h2>🖨 Boarding pass printed</h2><div class="pass"><div><span>PASSENGER</span><b>${esc((S.name || "Traveller").toUpperCase())}</b></div><div><span>FROM</span><b>${airport.iata}</b></div><div><span>SEAT</span><b>${seat}</b></div><div><span>FLIGHT</span><b>AY${100 + hashStr(today()) % 900}</b></div><div><span>GATE</span><b>A7</b></div><div><span>GROUP</span><b>1</b></div></div><p class="muted">Head through security, then follow signs to the gates.</p><div class="row"><button class="btn go" onclick="closeModal()">Thanks</button></div>`);
+  secret("checkin");
+}
+function openSouvenirs() {
+  const items = SOUVENIRS(), owned = S.souvenirs || [];
+  modal(`<h2>🛍 Souvenirs</h2><p class="muted">Pay with air miles. You have <b>${miles().toLocaleString()}</b> miles — fly focus flights to earn more.</p><div class="board">${items.map(([n, p], i) => `<div style="grid-template-columns:1fr 90px 90px"><span>${esc(n)}</span><span>${p} mi</span>${owned.includes(n) ? '<span class="done">OWNED ✓</span>' : `<button class="btn" data-buy="${i}" style="padding:4px 10px">Buy</button>`}</div>`).join("")}</div><div class="row"><button class="btn" onclick="closeModal()">Close</button></div>`, () => {
+    document.querySelectorAll("[data-buy]").forEach((b) => b.onclick = () => { const [n, p] = items[+b.dataset.buy]; if (miles() < p) { toast("Not enough miles yet. A focus flight earns plenty."); return; } S.spent = (S.spent || 0) + p; S.souvenirs = [...owned, n]; store.save(); chime([79, 84]); secret("souvenir"); openSouvenirs(); });
+  });
+}
+function openBook() { const [t, q] = pick(Math.random, BOOKS); modal(`<h2>📖 ${t}</h2><p class="big">${q}</p><div class="row"><button class="btn" onclick="closeModal()">Put it back</button></div>`); }
+function perfume() { for (let i = 0; i < 10; i++) spawn("spark", me.x, me.base - 130); toast("You now smell like a first-class lounge."); }
+function openFood(kind) {
+  const local = DISH[airport.cc] || "Chef's local special";
+  const menu = kind === "noodles" ? [["Tonkotsu ramen", 40], ["Kitsune udon", 35], ["Yakisoba", 30]] : [[local, 45], ["Fresh juice", 15], ["Dessert of the day", 20]];
+  modal(`<h2>${kind === "noodles" ? "🍜 Noodle bar" : "🍽 Local flavours"}</h2><p class="muted">Paid in air miles · you have ${miles().toLocaleString()}</p><div class="row">${menu.map(([n, p], i) => `<button class="btn" data-eat="${i}">${esc(n)} · ${p} mi</button>`).join("")}</div><div class="row"><button class="btn" onclick="closeModal()">Not hungry</button></div>`, () => {
+    document.querySelectorAll("[data-eat]").forEach((b) => b.onclick = () => { const [n, p] = menu[+b.dataset.eat]; if (miles() < p) { toast("Not enough miles."); return; } S.spent = (S.spent || 0) + p; store.save(); closeModal(); for (let i = 0; i < 6; i++) spawn("heart", me.x, me.base - 140); chime([76, 79, 84]); toast(`${n}: delicious. Fuel for focus.`); secret("foodie"); });
+  });
+}
+function sit(o) { me.x = o.x; me.sitting = true; me.target = null; toast("Comfy. Press A or D to get up.", 2800); secret("lounge"); }
+function aquarium() { for (let i = 0; i < 8; i++) spawn("spark", 7640, 420); toast(pick(Math.random, ["The orange fish is called Captain.", "A fish swims over to say hello.", "You feel your shoulders drop. Fish are good at that."])); }
+function fireplace() { for (let i = 0; i < 6; i++) spawn("heart", 7990, 520); toast("You warm your hands. Very cozy."); }
+function grabBag() {
+  const c = objects.find((o) => o.kind === "carousel"); if (!c || !c.bags) return;
+  const b = c.bags.filter((q) => !q.gone).sort((p, q) => Math.abs(p.x - me.x) - Math.abs(q.x - me.x))[0];
+  if (!b || Math.abs(b.x - me.x) > 45) { toast("Wait for a bag to come past you."); return; }
+  if (!b.mine) { toast("That's not your bag. Look for the amber tag."); return; }
+  b.gone = true; for (let i = 0; i < 12; i++) spawn("spark", me.x, 600); chime([72, 76, 79, 84]); toast("Got your bag! First time it came out first."); secret("carousel");
+}
+function binoculars() {
+  const types = ["Airbus A350", "Boeing 787", "Airbus A321neo", "Boeing 777", "Embraer E195", "Airbus A380"], dest = pick(Math.random, AIRPORTS.filter((a) => a !== airport));
+  S.spotted = (S.spotted || 0) + 1; store.save(); if (S.spotted >= 5) secret("spotter");
+  modal(`<h2>🔭 Spotted!</h2><p class="big">${pick(Math.random, types)} · AY ${100 + Math.floor(Math.random() * 900)}</p><p>Departing for <b>${dest.city}</b>, climbing to ${(28 + Math.floor(Math.random() * 13)) * 1000} ft.</p><p class="muted">Aircraft spotted: ${S.spotted}${S.spotted < 5 ? ` · spot ${5 - S.spotted} more for a secret` : ""}</p><div class="row"><button class="btn" onclick="closeModal()">Keep watching</button></div>`);
+}
+function telescope() { toast(light < 0.4 ? pick(Math.random, ["You find Jupiter and four tiny moons.", "The Moon's craters are crisp tonight.", "A satellite glides silently overhead."]) : pick(Math.random, ["A hawk circles above the runway.", "You can read the tail number of a plane on final.", "Far away, a tiny plane catches the sun."]), 4200); }
+function pickPostcard(p) {
+  const [, , , text] = POSTCARDS[p.id];
+  S.postcards = [...(S.postcards || []), p.id]; store.save();
+  objects = objects.filter((o) => o !== p); LEVELS[level].objects = objects;
+  chime([79, 84]);
+  modal(`<h2>✉️ Postcard ${S.postcards.length}/10</h2><p class="big">${text}</p><div class="row"><button class="btn" onclick="closeModal()">Keep it</button></div>`);
+  if (S.postcards.length === POSTCARDS.length) secret("postcards");
+}
+function openPassport() {
+  const uniq = [...new Map(S.stamps.map((s) => [s.iata, s])).values()];
+  const h = Math.floor(S.minutes / 60), m = S.minutes % 60;
+  modal(`<h2>🛂 Passport · ${esc(S.name || "Traveller")}</h2><p class="muted">Home ${S.home || "—"} · now in ${airport.city}</p>
+    <div class="stats"><div><b>${h}h ${m}m</b>focus time</div><div><b>${S.flights}</b>flights</div><div><b>${miles().toLocaleString()}</b>air miles to spend</div><div><b>${S.streak || 0}</b>day streak</div></div>
+    <h3>Stamps</h3><div class="stamps">${uniq.length ? uniq.map((s) => `<div class="stamp" title="${BY_IATA[s.iata]?.city} · ${s.date}" style="--r:${(hashStr(s.iata) % 30) - 15}deg;color:${stampColor(s.iata)}">${s.iata}</div>`).join("") : '<span class="muted">Finish a focus flight at Gate A7 for your first stamp.</span>'}</div>
+    <h3>Postcards · ${(S.postcards || []).length}/10</h3><p class="muted">${(S.postcards || []).length ? "Hidden all over the terminal — and one on the roof." : "Glowing postcards are hidden all over the terminal."}</p>
+    <h3>Souvenirs</h3><div class="secrets">${(S.souvenirs || []).length ? S.souvenirs.map((n) => `<span>🎁 ${esc(n)}</span>`).join("") : '<span class="muted">Visit the souvenir shop in Duty Free.</span>'}</div>
+    <h3>Secrets found · ${S.secrets.length}/${Object.keys(SECRETS).length}</h3><div class="secrets">${Object.entries(SECRETS).map(([k, v]) => `<span>${S.secrets.includes(k) ? v : "❔ ???"}</span>`).join("")}</div>
+    <div class="row"><button class="btn" id="pp-move">Change airport</button><button class="btn" onclick="closeModal()">Close</button></div>`, () => { $("#pp-move").onclick = () => openSplash(); });
+}
+
+// ---------------------------------------------------------------- zone title and minimap
+const QUESTS = [
+  ["checkin", "Check in at a self-service kiosk"], ["scanner", "Clear security"], ["foodie", "Grab a bite at the food court"],
+  ["flight", "Board a focus flight at Gate A7"], ["roof", "Find the way up to the rooftop"], ["social", "Say hi to everyone", () => `${(S.talked || []).length}/7`],
+  ["postcards", "Collect the hidden postcards", () => `${(S.postcards || []).length}/10`], ["spotter", "Spot 5 planes from the deck", () => `${Math.min(5, S.spotted || 0)}/5`],
+  ["carousel", "Grab your bag at baggage claim"], ["souvenir", "Buy a souvenir"], ["lounge", "Relax in the Sky Lounge"], ["chord", "Play the secret chord on a piano"],
+];
+let questKey = "";
+function updateQuests() {
+  const done = (id) => id === "flight" ? S.flights > 0 : S.secrets.includes(id);
+  const open = QUESTS.filter(([id]) => !done(id)).slice(0, 3);
+  const key = open.map((q) => q[0] + (q[2] ? q[2]() : "")).join();
+  if (key === questKey) return; questKey = key;
+  const total = QUESTS.length, finished = total - QUESTS.filter(([id]) => !done(id)).length;
+  $("#quests").innerHTML = `<h4>Journey · ${finished}/${total}</h4>` + (open.length ? open.map(([, t, prog]) => `<div>${t}${prog ? `<span class="prog">${prog()}</span>` : ""}</div>`).join("") : "<div>Every goal complete. Captain material. ✈</div>");
+}
+function updateZone() {
+  updateQuests();
+  const z = level === "roof" ? { id: "roof", name: "Rooftop Observation Deck" } : zoneAt(me.x);
+  if (z.id !== zoneNow) {
+    zoneNow = z.id; const el = $("#zone"); el.innerHTML = `<small>${airport.iata} · ${level === "roof" ? "LEVEL 3" : "LEVEL 1"}</small>${z.name}`; el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
+    renderMap();
+  }
+  const dot = $("#map-dot"); if (dot) dot.style.left = `${(me.x / WW) * 100}%`;
+}
+function renderMap() {
+  const m = $("#map");
+  if (level === "roof") { m.innerHTML = `<div class="seg on" style="flex:1">Rooftop deck</div><div id="map-dot"></div>`; return; }
+  m.innerHTML = ZONES.map((z) => `<div class="seg ${z.id === zoneNow ? "on" : ""}" style="flex:${z.x2 - z.x1}" data-x="${(z.x1 + z.x2) / 2}" title="${z.name}">${z.name.split(" ")[0]}</div>`).join("") + '<div id="map-dot"></div>';
+  m.querySelectorAll("[data-x]").forEach((s) => s.onclick = () => { me.target = +s.dataset.x; me.after = null; me.sitting = false; toast(`Walking to ${s.title}…`, 1800); });
+}
+
 // ---------------------------------------------------------------- particles & paper planes
 function spawn(type, x, y) { parts.push({ type, x: x + (Math.random() - 0.5) * 30, y, vx: (Math.random() - 0.5) * 24, vy: -30 - Math.random() * 30, life: 2.2 }); }
 const fx = {
   burst(kind, type, n) { const o = objects.find((q) => q.kind === kind); if (!o) return; if (kind === "piano") o.t = 1.4; for (let i = 0; i < n; i++) spawn(type, o.x, o.base - o.h * 0.8); },
-  remove(kind) { objects = objects.filter((o) => o.kind !== kind); },
+  remove(kind) { objects = objects.filter((o) => o.kind !== kind); LEVELS[level].objects = objects; },
   catName() { return (objects.find((o) => o.kind === "cat") || {}).name || "The cat"; },
   paperPlane() { papers.push({ x: me.x, y: me.base - 120, dir: me.dir, t: 0 }); },
 };
@@ -1141,12 +1538,11 @@ function tuneRadio() {
   toast(`📻 ${S.mood ? MOODS[S.mood].name : "Auto: music follows " + airport.city + "'s time and weather"}`); secret("radio");
 }
 function openHelp() {
-  modal(`<h2>How the lounge works</h2>
-    <p><kbd>A</kbd><kbd>D</kbd> or <kbd>←</kbd><kbd>→</kbd> to walk · hold <kbd>Shift</kbd> to hurry · or click where you want to go</p>
-    <p><kbd>E</kbd> use whatever you're standing next to (or click it)</p>
-    <p><kbd>B</kbd> departures board (your tasks) · <kbd>P</kbd> passport · <kbd>M</kbd> mute</p>
-    <p><kbd>H</kbd> hide everything and just enjoy the view · <kbd>F</kbd> fullscreen</p>
-    <p class="muted">Board a focus flight at Gate A7 and stay until it lands to collect a stamp at your destination. Every airport hides a few surprises, and they change every day.</p>
+  modal(`<h2>How the airport works</h2>
+    <p><kbd>A</kbd><kbd>D</kbd> or <kbd>←</kbd><kbd>→</kbd> walk · <kbd>Shift</kbd> hurry · or click where you want to go</p>
+    <p><kbd>E</kbd> use, talk, pick up · click a zone on the map at the bottom to walk there</p>
+    <p><kbd>B</kbd> your tasks · <kbd>P</kbd> passport · <kbd>M</kbd> mute · <kbd>H</kbd> focus view · <kbd>F</kbd> fullscreen</p>
+    <p class="muted">Six zones from Check-in to Baggage Claim, plus a rooftop deck (glass lift by the moving walkway). Shuttle stops 🚆 take you anywhere fast. Board a focus flight at Gate A7 to earn air miles for food and souvenirs. Ten postcards and lots of secrets are hidden around — they change every day.</p>
     <div class="row"><button class="btn" onclick="closeModal()">Got it</button></div>`);
 }
 function applyLook() {
@@ -1206,7 +1602,7 @@ cv.addEventListener("pointerdown", (e) => {
   audioInit(); if (S.flight || splashOpen) return;
   const rect = cv.getBoundingClientRect(), wx = camX + (e.clientX - rect.left) / rect.width * VW, wy = (e.clientY - rect.top) / rect.height * LH;
   const hit = objects.find((o) => o.act && wx > o.x - o.w / 2 - 10 && wx < o.x + o.w / 2 + 10 && wy > o.base - o.h - 40 && wy < o.base + 30);
-  me.target = clamp(hit ? hit.x : wx, 40, WW - 40); me.after = hit || null;
+  me.target = clamp(hit ? hit.x : wx, 40, WW - 40); me.after = hit || null; me.sitting = false;
 });
 $("#t-board").onclick = () => !S.flight && openBoard();
 $("#t-passport").onclick = openPassport;
@@ -1233,28 +1629,32 @@ function frame(t) {
   wasFlying = false;
   // move
   let mv = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
-  if (mv) { me.target = null; me.after = null; }
+  if (mv) { me.target = null; me.after = null; me.sitting = false; }
   else if (me.target != null) { const d = me.target - me.x; if (Math.abs(d) < 6) { me.target = null; if (me.after) { const o = me.after; me.after = null; o.act(); } } else mv = Math.sign(d); }
-  if (mv) { const sp = keys.shift ? 330 : 190; me.x = clamp(me.x + mv * sp * dt, 40, WW - 40); me.dir = mv; const before = me.phase; me.phase += dt * sp / 18; if (Math.floor(before / Math.PI) !== Math.floor(me.phase / Math.PI)) footstep(); }
+  if (mv) { const sp = (keys.shift ? 330 : 190) * (level === "ground" && me.x > WALK[0] && me.x < WALK[1] ? 1.9 : 1); me.x = clamp(me.x + mv * sp * dt, 40, WW - 40); me.dir = mv; const before = me.phase; me.phase += dt * sp / 18; if (Math.floor(before / Math.PI) !== Math.floor(me.phase / Math.PI)) footstep(); }
+  if (level === "ground") { const side = Math.sign(me.x - SCANNER_X); if (scannerSide !== null && side !== scannerSide && side !== 0) { const sc = objects.find((o) => o.kind === "scanner"); const red = Math.random() < 0.2; if (sc) { sc.t = 1.2; sc.red = red; } chime(red ? [60, 60] : [84]); toast(red ? "Beep! Random check… just your belt buckle. You're clear." : "All clear. Welcome airside.", 2600); secret("scanner"); } scannerSide = side; }
   me.blink = (t % 4200) < 120;
   camX += (clamp(me.x - VW * 0.45, 0, WW - VW) - camX) * Math.min(1, dt * 6);
+  updateZone();
   // scene
   const [top, bot] = skyColors(hour);
   ctx.save(); ctx.translate(-camX, 0);
-  drawSky(top, bot); drawHorizon(top, bot); drawWeather(); drawGlass(); drawFloor();
+  drawBackdrop(top, bot);
   const actors = [];
-  for (const o of objects) actors.push([o.kind === "board" || o.kind === "shop" ? 0 : o.base, () => o.draw(o), o]);
+  const cx = camX + VW / 2;
+  for (const o of objects) if (Math.abs(o.x - cx) < VW / 2 + o.w / 2 + 200) actors.push([o.back || o.kind === "board" || o.kind === "lift" ? 0 : o.kind === "walkway" || o.kind === "carousel" ? 605 : o.base, () => o.draw(o), o]);
   for (const n of npcs) {
     if (!n.sitting) { n.x += n.v * dt; n.phase += Math.abs(n.v) * dt / 18; if (Math.abs(n.x - me.x) < 40 && Math.abs(n.base - me.base) < 25) n.base += (n.base > me.base ? 1 : -1) * 40 * dt; }
     const s = 1.12 + (n.base - 600) / 90 * 0.18;
-    actors.push([n.base, () => person(n.x, n.base, s, n.look, n.phase, n.sitting ? 0 : 1, n.dir, { bag: n.bag, sitting: n.sitting, blink: (t + n.x * 7) % 5000 < 120 }), null]);
+    if (Math.abs(n.x - cx) < VW / 2 + 120) actors.push([n.base, () => person(n.x, n.base, s, n.look, n.phase, n.sitting ? 0 : 1, n.dir, { bag: n.bag, sitting: n.sitting, blink: (t + n.x * 7) % 5000 < 120 }), null]);
   }
   npcs = npcs.filter((n) => n.sitting || (n.x > -100 && n.x < WW + 100));
-  while (npcs.filter((n) => !n.sitting).length < 9) npcs.push(newNpc());
-  actors.push([me.base, () => person(me.x, me.base, 1.3, S.look, me.phase, mv ? 1 : 0, me.dir, { blink: me.blink }), null]);
+  while (npcs.filter((n) => !n.sitting).length < (level === "roof" ? 4 : 26)) npcs.push(newNpc());
+  LEVELS[level].npcs = npcs;
+  actors.push([me.sitting ? 600 : me.base, () => person(me.x, me.sitting ? 600 : me.base, 1.3, S.look, me.phase, mv ? 1 : 0, me.dir, { blink: me.blink, sitting: me.sitting }), null]);
   actors.sort((a, b) => a[0] - b[0]);
   // reflections on the polished floor
-  for (const [, draw, o] of actors) if (!o || o.kind !== "board") reflect(draw);
+  if (level === "ground") for (const [, draw, o] of actors) if (!o || (!o.noReflect && !o.back && o.kind !== "board" && o.kind !== "lift")) reflect(draw);
   ctx.fillStyle = vgrad(FLOOR, LH, [[0, "rgba(0,0,0,0)"], [1, rgba(mixHex("#d9d3c7", "#2b2c38", 1 - light), 0.5)]]); ctx.fillRect(camX, FLOOR + 4, VW, LH - FLOOR);
   for (const [, draw] of actors) draw();
   drawParts(dt);
@@ -1270,7 +1670,7 @@ function frame(t) {
   }
   // foreground leaves for depth
   ctx.globalAlpha = 0.9;
-  for (const fxp of [60, 3420]) { const x = fxp - camX * 0.25; if (x > camX - 300 && x < camX + VW + 100) ctx.drawImage(LEAF, x, LH - 210, 170, 200); }
+  if (level === "ground") for (const fxp of [60, 3420, 5600, 7700, 9400]) { const x = fxp - camX * 0.25; if (x > camX - 300 && x < camX + VW + 100) ctx.drawImage(LEAF, x, LH - 210, 170, 200); }
   ctx.globalAlpha = 1;
   ctx.restore();
   // night grade and vignette
@@ -1281,6 +1681,7 @@ function frame(t) {
   if (Math.random() < dt / 20 && planes.length < 2) planes.push({ x: camX * 0.45 - 300, y: 452, v: 20, climb: 0, livery: pick(Math.random, ["#ffb547", "#2f6fd6", "#d64545", "#2aa876", "#7b4fd6"]) });
   for (const p of planes) { p.v = Math.min(260, p.v + 55 * dt); if (p.v > 190) { p.climb = Math.min(0.2, p.climb + dt * 0.1); p.y -= Math.sin(p.climb) * p.v * dt; } p.x += p.v * dt; }
   planes = planes.filter((p) => p.x < camX * 0.45 + VW + 400 && p.y > -100);
+  if (level === "roof") { if (Math.random() < dt / 14 && roofPlanes.length < 1) roofPlanes.push({ x: camX - 400, y: 400, v: 110, climb: 0.04, livery: pick(Math.random, ["#ffb547", "#2f6fd6", "#d64545", "#2aa876", "#7b4fd6"]) }); for (const p of roofPlanes) { p.v = Math.min(300, p.v + 40 * dt); p.climb = Math.min(0.22, p.climb + dt * 0.03); p.x += p.v * dt; p.y -= Math.sin(p.climb) * p.v * dt; } roofPlanes = roofPlanes.filter((p) => p.x < camX + VW + 500 && p.y > -200); }
   if (layover) { const left = layover - Date.now(); if (left <= 0) { layover = 0; chime([72, 79]); toast("Layover over. Ready for the next flight?"); } }
   if (t > announceAt) { announceAt = t + 120000 + Math.random() * 120000; announce(); }
   if (t - lastBanner > 30000) { lastBanner = t; updateBanner(); }
@@ -1308,6 +1709,9 @@ function announce() {
   S.at = airport.iata;
   applyLook();
   buildScene(); updateBanner(); fetchWeather();
+  if (S.pos) { setLevel(S.pos.level === "roof" ? "roof" : "ground"); me.x = clamp(S.pos.x || 980, 40, WW - 40); } else me.x = GATE_X - 140;
+  camX = clamp(me.x - VW * 0.45, 0, WW - VW);
+  setInterval(() => { S.pos = { level, x: Math.round(me.x) }; store.save(); }, 4000);
   $("#loading").style.display = "none";
   if (S.flight) toast("Welcome back — your flight is still in the air.");
   openSplash();
