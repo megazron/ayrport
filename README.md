@@ -20,12 +20,12 @@ terminal Flight:
         me.seats = seats
 
     counter status(me, delay):
-        gate delay == 0:
-            depart "ON TIME"
+        check delay == 0:
+            issue "ON TIME"
         alt delay < 30:
-            depart "DELAYED"
+            issue "DELAYED"
         div:
-            depart "CANCELLED"
+            issue "CANCELLED"
 
 flight = Flight("AY101", 180)
 belt d in [0, 12, 95]:
@@ -60,41 +60,57 @@ ayr words                 # list every Ayrport word
 
 ## The words
 
-Every keyword comes from the airport terminal: counters, gates, belts,
-security, customs and lounges.
+Every keyword is an airport thing that **behaves like** the code it stands for.
 
-| Ayrport    | Python       | Think of it as                         |
-|------------|--------------|----------------------------------------|
-| `counter`  | `def`        | a counter does one job                 |
-| `depart`   | `return`     | the result departs the counter         |
-| `kiosk`    | `lambda`     | a tiny self-service counter            |
-| `terminal` | `class`      | a terminal groups counters             |
-| `arrive`   | `__init__`   | runs when a new object arrives         |
-| `me`       | `self`       | the object itself (convention)         |
-| `gate`     | `if`         | pass through this gate if ...          |
-| `alt`      | `elif`       | alternate gate                         |
-| `div`      | `else`       | divert everyone else                   |
-| `belt`     | `for`        | every bag on the baggage belt          |
-| `hold`     | `while`      | wait in the hold room while ...        |
-| `leave`    | `break`      | leave the loop                         |
-| `skip`     | `continue`   | skip to the next one                   |
-| `standby`  | `pass`       | on standby, do nothing                 |
-| `drop`     | `yield`      | bag drop: hand one over, keep going    |
-| `screen`   | `try`        | security screening                     |
-| `flagged`  | `except`     | caught at security                     |
-| `customs`  | `finally`    | everyone goes through customs          |
-| `flag`     | `raise`      | flag a problem                         |
-| `xray`     | `assert`     | x-ray check                            |
-| `lounge`   | `with`       | enter the lounge, tidied up after      |
-| `load`     | `import`     | load cargo                             |
-| `pa`       | `print(...)` | public announcement                    |
-| `chkin`    | `input`      | check-in                               |
-| `rwy`      | `range`      | a runway of numbers                    |
-| `wait`     | `time.sleep` | wait at the gate                       |
-| `go` / `nogo` / `nil` | `True` / `False` / `None` |              |
+**Counters and terminals**
+
+| Ayrport    | Python     | Why                                                         |
+|------------|------------|-------------------------------------------------------------|
+| `counter`  | `def`      | you hand your details to a counter and it does one job      |
+| `issue`    | `return`   | the counter issues something back to you                    |
+| `kiosk`    | `lambda`   | a self-service counter: tiny and nameless                   |
+| `drop`     | `yield`    | bag drop: hand one over, come back for the next             |
+| `terminal` | `class`    | a terminal groups its own counters and data                 |
+| `arrive`   | `__init__` | runs when a new one arrives                                 |
+| `me`       | `self`     | the object itself (just a convention)                       |
+
+**Checks and loops**
+
+| Ayrport    | Python     | Why                                                         |
+|------------|------------|-------------------------------------------------------------|
+| `check`    | `if`       | go this way only if the check passes                        |
+| `alt`      | `elif`     | an alternative check, tried when the ones above failed      |
+| `div`      | `else`     | divert: where everyone goes when no check passed            |
+| `belt`     | `for`      | every bag on the baggage belt passes once                   |
+| `shuttle`  | `while`    | the shuttle keeps looping round while it is needed          |
+| `leave`    | `break`    | leave the loop now                                          |
+| `skip`     | `continue` | skip to the next one                                        |
+| `standby`  | `pass`     | on standby: nothing happens                                 |
+
+**Security**
+
+| Ayrport    | Python     | Why                                                         |
+|------------|------------|-------------------------------------------------------------|
+| `screen`   | `try`      | everything inside goes through screening                    |
+| `flagged`  | `except`   | what to do when screening flags a problem                   |
+| `customs`  | `finally`  | everyone passes customs, flagged or not                     |
+| `flag`     | `raise`    | flag a problem for security to handle                       |
+| `xray`     | `assert`   | x-ray check: must be fine or you stop here                  |
+
+**Gates, cargo and the PA**
+
+| Ayrport    | Python       | Why                                                       |
+|------------|--------------|-----------------------------------------------------------|
+| `gate`     | `with`       | a gate opens for you and closes behind you                |
+| `load`     | `import`     | load cargo on board                                       |
+| `pa`       | `print(...)` | the public announcement system                            |
+| `checkin`  | `input`      | check-in asks the passenger for their details             |
+| `rwy`      | `range`      | a runway of numbers                                       |
+| `wait`     | `time.sleep` | wait at the gate                                          |
+| `go` / `nogo` / `nil` | `True` / `False` / `None` |                                |
 
 `load sqrt, pi from math` is `from math import sqrt, pi`.
-A one-line choice reads `"on time" gate delay == 0 div "late"`.
+A one-line choice reads `"on time" check delay == 0 div "late"`.
 
 Full guide: **[docs/language.md](docs/language.md)**.
 
@@ -109,10 +125,10 @@ import flightdeck                    # loads flightdeck.ayr
 
 print(flightdeck.eta(5600))
 
-ns = ayrport.run('counter hi(x):\n    depart f"hi {x}"\n')   # run a snippet
+ns = ayrport.run('counter hi(x):\n    issue f"hi {x}"\n')   # run a snippet
 print(ns["hi"]("there"))
 
-print(ayrport.transpile('gate fuel < 10: pa "low fuel"'))
+print(ayrport.transpile('check fuel < 10: pa "low fuel"'))
 # if fuel < 10: print("low fuel")
 ```
 
@@ -133,11 +149,11 @@ The [`vscode-extension`](vscode-extension) folder holds the Ayrport extension:
 syntax highlighting, hover cards that explain every word, completions,
 snippets, auto-indent, and a ▶ **Run** button (F5).
 
-**Install:** download `ayrport-1.1.0.vsix` from the
+**Install:** download `ayrport-1.2.0.vsix` from the
 [latest release](https://github.com/megazron/ayrport/releases/latest), then
 
 ```bash
-code --install-extension ayrport-1.1.0.vsix
+code --install-extension ayrport-1.2.0.vsix
 ```
 
 or in VS Code: *Extensions → ⋯ → Install from VSIX…*
@@ -149,7 +165,7 @@ Build it yourself with `cd vscode-extension && npx @vscode/vsce package`.
 ```
 MAYDAY MAYDAY MAYDAY - Runway length zero (ZeroDivisionError)
   at crash.ayr, line 4, in boom
-    depart 1 / 0
+    issue 1 / 0
   division by zero
 ```
 
@@ -161,7 +177,7 @@ as line N of the Python it runs.
 ```
 flight.ayr ──► lexer ──► token rewrite ──► Python source ──► CPython
                  │            │
-     strings and comments     gate→if, counter→def, pa x→print(x),
+     strings and comments     check→if, counter→def, pa x→print(x),
      are never touched        load a from m→from m import a
 ```
 

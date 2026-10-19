@@ -5,12 +5,12 @@ Language support for [Ayrport](https://github.com/megazron/ayrport), the program
 ## Features
 
 - Syntax highlighting for `.ayr` files
-- Hover over any Ayrport word (`counter`, `gate`, `flagged`, ...) to see what it means
-- Keyword completions and snippets: type `counter`, `gate`, `belt`, `terminal`, `screen`, `lounge` and press Tab
+- Hover over any Ayrport word (`counter`, `check`, `flagged`, ...) to see what it means
+- Keyword completions and snippets: type `counter`, `check`, `belt`, `shuttle`, `terminal`, `screen`, `gate` and press Tab
 - **Run** the current file with **F5** or the ▶ button in the editor title bar
 - **Ayrport: Show Compiled Python** opens the Python your file compiles to, side by side
 - **Ayrport: Open Tower (REPL)** for an interactive prompt
-- Auto-indent after block lines (`gate x:`, `counter f():`, ...)
+- Auto-indent after block lines (`check x:`, `counter f():`, ...)
 
 ## Requirements
 
@@ -24,7 +24,7 @@ If `ayr` is not on your PATH, set **Settings → Ayrport: Command** to `python -
 
 ```ayr
 counter greet(name):
-    depart f"Now boarding: {name}"
+    issue f"Now boarding: {name}"
 
 pa greet("you")
 ```

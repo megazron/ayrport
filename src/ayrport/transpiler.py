@@ -13,7 +13,7 @@ from .lexer import COMMENT, NAME, NL, OP, STRING, WS, Token, depth_change, token
 from .words import BLOCK_OPENERS, DUNDERS, KEYWORDS
 
 # Helper words that translate straight to a Python builtin.
-_BUILTIN_SWAPS = {"pa": "print", "chkin": "input", "rwy": "range"}
+_BUILTIN_SWAPS = {"pa": "print", "checkin": "input", "rwy": "range"}
 
 _ASSIGN_OPS = {"=", "+=", "-=", "*=", "/=", "//=", "%=", "**=", "@=", "&=",
                "|=", "^=", ">>=", "<<=", ":="}
@@ -56,7 +56,7 @@ def _statements(tokens: list[Token]):
     """Split the token stream into simple statements.
 
     A statement ends at a newline outside brackets, at a `;`, or at the colon
-    that opens a block (so `gate x: pa x` is two statements).
+    that opens a block (so `check x: pa x` is two statements).
     """
     stmt: list[Token] = []
     depth = 0

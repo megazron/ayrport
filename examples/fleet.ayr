@@ -7,12 +7,12 @@ terminal Aircraft:
         me.onboard = []
 
     counter board(me, passenger):
-        gate len(me.onboard) >= me.seats:
+        check len(me.onboard) >= me.seats:
             flag OverbookedError(f"{me.callsign} is full")
         me.onboard.append(passenger)
 
     counter __repr__(me):
-        depart f"<{me.callsign} {len(me.onboard)}/{me.seats}>"
+        issue f"<{me.callsign} {len(me.onboard)}/{me.seats}>"
 
 
 terminal Jumbo(Aircraft):

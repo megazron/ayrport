@@ -1,5 +1,5 @@
 # hello.ayr — your first check-in
 pa "Welcome to Ayrport!"
 
-name = chkin("Passenger name? ")
+name = checkin("Passenger name? ")
 pa f"Now boarding: {name}"

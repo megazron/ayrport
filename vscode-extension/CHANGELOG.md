@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0
+- Vocabulary reworked so every word behaves like what it means: `check` (if), `issue` (return),
+  `shuttle` (while), `gate` (with), `checkin` (input)
+
 ## 1.1.0
 - New airport-terminal vocabulary: `counter`/`depart` (def/return), `terminal`/`arrive` (class/__init__),
   `gate`/`alt`/`div` (if/elif/else), `belt`/`hold` (for/while), `leave`/`skip`/`standby`

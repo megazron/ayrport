@@ -1,6 +1,6 @@
-# fizzbuzz.ayr — the classic, through the gates
+# fizzbuzz.ayr — the classic, through the checks
 belt n in rwy(1, 16):
-    gate n % 15 == 0: pa "FizzBuzz"
+    check n % 15 == 0: pa "FizzBuzz"
     alt n % 3 == 0: pa "Fizz"
     alt n % 5 == 0: pa "Buzz"
     div: pa n

@@ -13,7 +13,7 @@ EXAMPLES = ROOT / "examples"
 
 
 def test_run_returns_namespace():
-    ns = ayrport.run("counter double(x):\n    depart x * 2\nanswer = double(21)\n")
+    ns = ayrport.run("counter double(x):\n    issue x * 2\nanswer = double(21)\n")
     assert ns["answer"] == 42
 
 
@@ -30,9 +30,9 @@ def test_classes_and_errors():
             counter arrive(me, seats):
                 me.seats = seats
             counter board(me, n):
-                gate n > me.seats:
+                check n > me.seats:
                     flag ValueError("full")
-                depart n
+                issue n
         p = Plane(2)
         screen:
             p.board(5)
@@ -46,7 +46,7 @@ def test_classes_and_errors():
 
 
 def test_import_ayr_module(tmp_path, monkeypatch):
-    (tmp_path / "tower_mod.ayr").write_text("counter ping():\n    depart 'pong'\n")
+    (tmp_path / "tower_mod.ayr").write_text("counter ping():\n    issue 'pong'\n")
     monkeypatch.syspath_prepend(str(tmp_path))
     importlib.invalidate_caches()
     mod = importlib.import_module("tower_mod")
@@ -57,7 +57,7 @@ def test_import_ayr_package(tmp_path, monkeypatch):
     pkg = tmp_path / "airfield"
     pkg.mkdir()
     (pkg / "__init__.ayr").write_text("NAME = 'airfield'\n")
-    (pkg / "radar.ayr").write_text("load NAME from airfield\ncounter scan():\n    depart NAME + ' radar'\n")
+    (pkg / "radar.ayr").write_text("load NAME from airfield\ncounter scan():\n    issue NAME + ' radar'\n")
     monkeypatch.syspath_prepend(str(tmp_path))
     importlib.invalidate_caches()
     from airfield import radar
@@ -66,12 +66,12 @@ def test_import_ayr_package(tmp_path, monkeypatch):
 
 def test_traceback_points_at_ayr_line(tmp_path):
     f = tmp_path / "crash.ayr"
-    f.write_text("x = 1\n\ncounter boom():\n    depart 1 / 0\n\nboom()\n")
+    f.write_text("x = 1\n\ncounter boom():\n    issue 1 / 0\n\nboom()\n")
     with pytest.raises(ZeroDivisionError) as info:
         ayrport.run_file(str(f))
     report = ayrport.explain(info.value)
     assert "Runway length zero" in report
-    assert "line 4" in report and "depart 1 / 0" in report
+    assert "line 4" in report and "issue 1 / 0" in report
 
 
 @pytest.mark.parametrize("name", ["basics", "fleet", "files", "fizzbuzz", "flightdeck"])
@@ -97,7 +97,7 @@ def test_build_output_runs_as_plain_python(tmp_path):
 
 def test_check_command(tmp_path):
     bad = tmp_path / "bad.ayr"
-    bad.write_text("gate x\n    pa 1\n")
+    bad.write_text("check x\n    pa 1\n")
     out = subprocess.run([sys.executable, "-m", "ayrport", "check", str(bad)],
                          capture_output=True, text=True)
     assert out.returncode == 1

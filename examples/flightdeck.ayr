@@ -2,10 +2,10 @@
 
 counter eta(distance_km, speed_kmh=850):
     "Hours to destination."
-    depart round(distance_km / speed_kmh, 2)
+    issue round(distance_km / speed_kmh, 2)
 
 counter callsign(airline, number):
-    depart f"{airline.upper()}{number:03d}"
+    issue f"{airline.upper()}{number:03d}"
 
 terminal Runway:
     counter arrive(me, name, length_m):
@@ -13,4 +13,4 @@ terminal Runway:
         me.length_m = length_m
 
     counter fits(me, aircraft_needs_m):
-        depart me.length_m >= aircraft_needs_m
+        issue me.length_m >= aircraft_needs_m

@@ -1,31 +1,38 @@
-"""The Ayrport vocabulary: every airport word and the Python it lands as."""
+"""The Ayrport vocabulary: every airport word and the Python it becomes.
+
+Each word was picked because the airport thing behaves like the code concept:
+a counter takes your details and issues something back (a function), every
+bag rides the belt once (a for loop), a shuttle keeps going round while it is
+needed (a while loop), a gate opens for you and closes behind you (with).
+"""
 
 # Plain one-to-one swaps. Each Ayrport word becomes exactly one Python token.
 KEYWORDS = {
-    # decisions
-    "gate": "if",           # pass through this gate if ...
-    "alt": "elif",          # alternate gate
-    "div": "else",          # divert everyone else
+    # decisions: checks you must pass to go one way or another
+    "check": "if",          # check: go this way if it passes
+    "alt": "elif",          # alternative check
+    "div": "else",          # divert: everyone who passed no check
     # loops
-    "belt": "for",          # every bag on the belt
-    "hold": "while",        # wait in the hold room while ...
-    "leave": "break",       # leave the queue now
-    "skip": "continue",     # skip to the next passenger
-    "standby": "pass",      # on standby, do nothing
-    # counters (functions) and terminals (classes)
-    "counter": "def",       # a counter does one job
-    "depart": "return",     # the result departs the counter
-    "kiosk": "lambda",      # a tiny self-service counter
-    "drop": "yield",        # bag drop: hand one over, keep going
-    "terminal": "class",    # a terminal holds counters and gates
-    # security
-    "screen": "try",        # security screening
-    "flagged": "except",    # caught at security
-    "customs": "finally",   # everyone goes through customs
-    "flag": "raise",        # flag a problem
-    "xray": "assert",       # x-ray check: must be true
+    "belt": "for",          # every bag on the belt passes once
+    "shuttle": "while",     # the shuttle keeps looping while needed
+    "leave": "break",       # leave the loop now
+    "skip": "continue",     # skip to the next one
+    "standby": "pass",      # on standby: nothing happens
+    # counters (functions)
+    "counter": "def",       # a counter takes your details and does a job
+    "issue": "return",      # the counter issues something back to you
+    "kiosk": "lambda",      # self-service counter: tiny and nameless
+    "drop": "yield",        # bag drop: hand one over, come back for the next
+    # terminals (classes)
+    "terminal": "class",    # a terminal groups its own counters and data
+    # security (errors)
+    "screen": "try",        # everything inside goes through screening
+    "flagged": "except",    # what to do when screening flags a problem
+    "customs": "finally",   # everyone passes customs, flagged or not
+    "flag": "raise",        # flag a problem for security to handle
+    "xray": "assert",       # x-ray check: must be fine or you stop here
     # resources
-    "lounge": "with",       # enter the lounge, tidy up on the way out
+    "gate": "with",         # a gate opens for you and closes behind you
     # values
     "go": "True",
     "nogo": "False",
@@ -46,7 +53,7 @@ DUNDERS = {
 # Helpers available inside every Ayrport program.
 BUILTINS = {
     "pa": "print",
-    "chkin": "input",
+    "checkin": "input",
     "rwy": "range",
     "wait": "time.sleep",
     "go": "True",
@@ -56,29 +63,29 @@ BUILTINS = {
 
 # One-line meanings, used by `ayr words` and the VS Code hover cards.
 MEANINGS = {
-    "gate": "if — pass through this gate if the condition holds",
-    "alt": "elif — alternate gate: try another condition",
-    "div": "else — divert: everyone else goes here (also the `else` of a one-line choice)",
-    "belt": "for — every bag on the belt: `belt bag in bags:`",
-    "hold": "while — wait in the hold room while the condition holds",
+    "check": "if — a check: go this way only if it passes",
+    "alt": "elif — alternative check, tried when the ones above failed",
+    "div": "else — divert: where everyone goes when no check passed (also the `else` of a one-line choice)",
+    "belt": "for — every bag on the belt passes once: `belt bag in bags:`",
+    "shuttle": "while — the shuttle keeps looping while the condition holds",
     "leave": "break — leave the loop now",
-    "skip": "continue — skip to the next pass of the loop",
-    "standby": "pass — on standby: an empty block",
-    "counter": "def — open a counter: define a function",
-    "depart": "return — the result departs the counter",
-    "kiosk": "lambda — a tiny self-service counter: `kiosk x: x * 2`",
-    "drop": "yield — bag drop: hand one value over and keep going",
-    "terminal": "class — a terminal groups counters: define a class",
-    "arrive": "__init__ — runs when a new object arrives: the constructor",
-    "screen": "try — security screening: run code that might fail",
-    "flagged": "except — caught at security: `flagged ValueError as e:`",
-    "customs": "finally — everyone goes through customs: always runs",
-    "flag": "raise — flag a problem: raise an error",
-    "xray": "assert — x-ray check: stop if it is not true",
-    "lounge": "with — enter the lounge, tidied up after: `lounge open(f) as g:`",
+    "skip": "continue — skip to the next one in the loop",
+    "standby": "pass — on standby: an empty block that does nothing",
+    "counter": "def — a counter takes your details and does a job: define a function",
+    "issue": "return — the counter issues something back to you",
+    "kiosk": "lambda — a self-service counter, tiny and nameless: `kiosk x: x * 2`",
+    "drop": "yield — bag drop: hand over one value, come back for the next",
+    "terminal": "class — a terminal groups its own counters and data: define a class",
+    "arrive": "__init__ — runs when a new one arrives: the constructor",
+    "screen": "try — screening: run code that might be flagged",
+    "flagged": "except — what to do when screening flags a problem: `flagged ValueError as e:`",
+    "customs": "finally — everyone passes customs, flagged or not: always runs",
+    "flag": "raise — flag a problem for security to handle",
+    "xray": "assert — x-ray check: must be fine or you stop here",
+    "gate": "with — opens for you and closes behind you: `gate open(f) as g:`",
     "load": "import — load cargo: `load math`, `load sqrt from math`",
     "pa": "print — public announcement: `pa \"Now boarding\"`",
-    "chkin": "input — check in a value from the passenger",
+    "checkin": "input — check-in: ask the passenger for a value",
     "rwy": "range — a runway of numbers: `rwy(10)`",
     "wait": "time.sleep — wait n seconds",
     "go": "True",
@@ -92,8 +99,8 @@ RESERVED = set(KEYWORDS) | set(STATEMENTS) | set(DUNDERS)
 
 # Statements that open an indented block (Ayrport and plain Python spellings).
 BLOCK_OPENERS = {
-    "gate", "alt", "div", "hold", "belt", "counter", "terminal", "screen",
-    "flagged", "customs", "lounge",
+    "check", "alt", "div", "belt", "shuttle", "counter", "terminal", "screen",
+    "flagged", "customs", "gate",
     "if", "elif", "else", "while", "for", "def", "class", "try", "except",
     "finally", "with", "async",
 }

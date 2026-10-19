@@ -3,33 +3,33 @@
 load sqrt, pi from math
 load random
 
-# functions: counter ... depart
+# functions: counter ... issue
 counter fuel_needed(km, burn=3.2):
-    depart km * burn
+    issue km * burn
 
-# if / elif / else: gate / alt / div
+# if / elif / else: check / alt / div
 counter status(delay):
-    gate delay == 0:
-        depart "ON TIME"
+    check delay == 0:
+        issue "ON TIME"
     alt delay < 30:
-        depart "DELAYED"
+        issue "DELAYED"
     div:
-        depart "CANCELLED"
+        issue "CANCELLED"
 
 # for: belt ... in
 belt d in [0, 12, 95]:
     pa f"delay {d:>3} min -> {status(d)}"
 
-# while: hold (the hold room)
+# while: shuttle (keeps looping while needed)
 queue = ["Ana", "Ben", "Cy"]
-hold queue:
+shuttle queue:
     pa "now serving", queue.pop(0)
 
 # break / continue: leave / skip
 belt gate_no in rwy(1, 10):
-    gate gate_no % 2 == 0:
+    check gate_no % 2 == 0:
         skip
-    gate gate_no > 7:
+    check gate_no > 7:
         leave
     pa "odd gate", gate_no
 
@@ -37,9 +37,9 @@ belt gate_no in rwy(1, 10):
 double = kiosk x: x * 2
 pa "double 21 =", double(21)
 
-# one-line choice: gate ... div
+# one-line choice: check ... div
 fuel = fuel_needed(500)
-pa "fuel ok" gate fuel < 2000 div "need more fuel"
+pa "fuel ok" check fuel < 2000 div "need more fuel"
 
 # go / nogo / nil  (True / False / None)
 boarding = go
@@ -47,7 +47,7 @@ pa "boarding:", boarding, "| nogo:", nogo, "| nil:", nil
 
 # generators: drop (bag drop)
 counter countdown(n):
-    hold n > 0:
+    shuttle n > 0:
         drop n
         n -= 1
 pa "countdown:", list(countdown(5))

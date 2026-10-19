@@ -141,7 +141,7 @@
       "patterns": [
         {
           "name": "keyword.control.flow.ayrport",
-          "match": "\\b(gate|alt|div|hold|belt|leave|skip|depart|drop|screen|flagged|customs|flag|if|elif|else|while|for|break|continue|return|yield|try|except|finally|raise|await|async|match|case)\\b"
+          "match": "\\b(check|alt|div|shuttle|belt|leave|skip|issue|drop|screen|flagged|customs|flag|if|elif|else|while|for|break|continue|return|yield|try|except|finally|raise|await|async|match|case)\\b"
         },
         {
           "name": "keyword.control.import.ayrport",
@@ -149,7 +149,7 @@
         },
         {
           "name": "keyword.other.ayrport",
-          "match": "\\b(lounge|xray|standby|with|assert|pass|del|global|nonlocal)\\b"
+          "match": "\\b(gate|xray|standby|with|assert|pass|del|global|nonlocal)\\b"
         },
         {
           "name": "storage.type.ayrport",
@@ -165,7 +165,7 @@
         },
         {
           "name": "support.function.builtin.ayrport",
-          "match": "\\b(pa|chkin|rwy|wait|print|input|range|len|str|int|float|list|dict|set|tuple|open|enumerate|zip|map|filter|sorted|sum|min|max|abs|round|isinstance|super|type)\\b"
+          "match": "\\b(pa|checkin|rwy|wait|print|input|range|len|str|int|float|list|dict|set|tuple|open|enumerate|zip|map|filter|sorted|sum|min|max|abs|round|isinstance|super|type)\\b"
         },
         {
           "name": "entity.name.function.magic.ayrport",

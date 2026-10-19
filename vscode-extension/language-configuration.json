@@ -11,16 +11,16 @@
   "surroundingPairs": [["{", "}"], ["[", "]"], ["(", ")"], ["\"", "\""], ["'", "'"]],
   "folding": { "offSide": true, "markers": { "start": "^\\s*#\\s*region\\b", "end": "^\\s*#\\s*endregion\\b" } },
   "indentationRules": {
-    "increaseIndentPattern": "^\\s*(gate|alt|div|hold|belt|counter|terminal|screen|flagged|customs|lounge|if|elif|else|while|for|def|class|try|except|finally|with|async)\\b.*:\\s*(#.*)?$",
+    "increaseIndentPattern": "^\\s*(check|alt|div|shuttle|belt|counter|terminal|screen|flagged|customs|gate|if|elif|else|while|for|def|class|try|except|finally|with|async)\\b.*:\\s*(#.*)?$",
     "decreaseIndentPattern": "^\\s*(alt|div|flagged|customs|elif|else|except|finally)\\b.*:"
   },
   "onEnterRules": [
     {
-      "beforeText": "^\\s*(?:gate|alt|div|hold|belt|counter|terminal|screen|flagged|customs|lounge|if|elif|else|while|for|def|class|try|except|finally|with|async)\\b.*:\\s*(#.*)?$",
+      "beforeText": "^\\s*(?:check|alt|div|shuttle|belt|counter|terminal|screen|flagged|customs|gate|if|elif|else|while|for|def|class|try|except|finally|with|async)\\b.*:\\s*(#.*)?$",
       "action": { "indent": "indent" }
     },
     {
-      "beforeText": "^\\s+(?:depart|leave|skip|standby|flag|return|break|continue|pass|raise)\\b.*$",
+      "beforeText": "^\\s+(?:issue|leave|skip|standby|flag|return|break|continue|pass|raise)\\b.*$",
       "action": { "indent": "outdent" }
     }
   ],

@@ -7,18 +7,18 @@
     ],
     "description": "Define a function"
   },
-  "Gate (if)": {
-    "prefix": "gate",
+  "Check (if)": {
+    "prefix": "check",
     "body": [
-      "gate ${1:condition}:",
+      "check ${1:condition}:",
       "    ${2:standby}"
     ],
     "description": "if"
   },
-  "Gate / divert (if / else)": {
-    "prefix": "gatediv",
+  "Check / divert (if / else)": {
+    "prefix": "checkdiv",
     "body": [
-      "gate ${1:condition}:",
+      "check ${1:condition}:",
       "    ${2:standby}",
       "div:",
       "    ${3:standby}"
@@ -41,10 +41,10 @@
     ],
     "description": "for i in range(n)"
   },
-  "Hold (while)": {
-    "prefix": "hold",
+  "Shuttle (while)": {
+    "prefix": "shuttle",
     "body": [
-      "hold ${1:condition}:",
+      "shuttle ${1:condition}:",
       "    ${2:standby}"
     ],
     "description": "while loop"
@@ -68,10 +68,10 @@
     ],
     "description": "try / except"
   },
-  "Lounge (with)": {
-    "prefix": "lounge",
+  "Gate (with)": {
+    "prefix": "gate",
     "body": [
-      "lounge open(${1:path}) as ${2:f}:",
+      "gate open(${1:path}) as ${2:f}:",
       "    ${3:pa $2.read()}"
     ],
     "description": "with block"
@@ -79,7 +79,7 @@
   "Main guard": {
     "prefix": "main",
     "body": [
-      "gate __name__ == \"__main__\":",
+      "check __name__ == \"__main__\":",
       "    ${1:main()}"
     ],
     "description": "Run only when executed directly"

@@ -11,10 +11,10 @@ print(flightdeck.Runway("27L", 3900).fits(3000))  # True
 # run Ayrport code from a string and get its variables back
 ns = ayrport.run("""
 counter greet(who):
-    depart f"Welcome aboard, {who}"
+    issue f"Welcome aboard, {who}"
 msg = greet("Python")
 """)
 print(ns["msg"])
 
 # see the Python an Ayrport snippet compiles to
-print(ayrport.transpile('gate fuel < 10: pa "low fuel"'))
+print(ayrport.transpile('check fuel < 10: pa "low fuel"'))
