@@ -1,0 +1,54 @@
+# airline_fleet.ayr — inheritance and polymorphism
+# shows: terminal Child(Parent), super().arrive, overriding counters, isinstance
+
+terminal Aircraft:
+    kind = "aircraft"
+    burn_per_km = 3.0           # kg of fuel per km
+
+    counter arrive(me, reg, seats):
+        me.reg = reg
+        me.seats = seats
+
+    counter fuel_for(me, km):
+        issue round(me.burn_per_km * km)
+
+    counter can_fly(me, km):
+        issue km <= me.range_km
+
+    counter __str__(me):
+        issue f"{me.kind:<9} {me.reg}  {me.seats:>3} seats"
+
+
+terminal Jumbo(Aircraft):
+    kind = "jumbo"
+    burn_per_km = 11.0
+    range_km = 14000
+
+
+terminal Narrowbody(Aircraft):
+    kind = "narrow"
+    burn_per_km = 2.6
+    range_km = 6000
+
+
+terminal Turboprop(Aircraft):
+    kind = "turboprop"
+    burn_per_km = 1.1
+    range_km = 1500
+
+    counter arrive(me, reg):
+        super().arrive(reg, seats=70)    # turboprops always have 70 seats
+
+
+fleet = [Jumbo("G-AYR1", 410), Narrowbody("G-AYR2", 180), Turboprop("G-AYR3")]
+trip_km = 5540                            # London to New York
+
+pa f"Who can fly {trip_km} km?"
+belt plane in fleet:
+    check plane.can_fly(trip_km):
+        pa f"  {plane}  yes, needs {plane.fuel_for(trip_km):,} kg fuel"
+    div:
+        pa f"  {plane}  no, range only {plane.range_km} km"
+
+big = [p.reg belt p in fleet check isinstance(p, Jumbo)]
+pa f"jumbos in the fleet: {big}"

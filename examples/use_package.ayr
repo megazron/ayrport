@@ -1,0 +1,7 @@
+# use_package.ayr — Ayrport loading another Ayrport package (airport_lib/)
+load airport_lib
+load bag_fee from airport_lib
+
+pa "airport_lib version", airport_lib.VERSION
+pa "fee for a 30 kg bag:", bag_fee(30)
+pa "flight code:", airport_lib.format_code("ay", 42)

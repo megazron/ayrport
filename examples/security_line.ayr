@@ -1,0 +1,52 @@
+# security_line.ayr — airport security
+# shows: flag (raise), screen/flagged/customs (try/except/finally), custom errors, xray (assert)
+
+PROHIBITED = {"knife", "lighter", "water bottle"}
+MAX_LIQUID_ML = 100
+
+
+terminal SecurityFlag(Exception):
+    standby
+
+
+terminal ProhibitedItem(SecurityFlag):
+    standby
+
+
+terminal TooMuchLiquid(SecurityFlag):
+    standby
+
+
+counter screen_bag(owner, items):
+    belt item, amount in items.items():
+        check item in PROHIBITED:
+            flag ProhibitedItem(f"{owner}: {item} is not allowed")
+        check item == "liquid" and amount > MAX_LIQUID_ML:
+            flag TooMuchLiquid(f"{owner}: {amount} ml of liquid (max {MAX_LIQUID_ML})")
+    issue go
+
+
+passengers = {
+    "Ana": {"laptop": 1, "liquid": 80},
+    "Ben": {"book": 2, "knife": 1},
+    "Cy": {"liquid": 500, "phone": 1},
+    "Dee": {"camera": 1},
+}
+
+cleared, stopped = [], []
+belt name, bag in passengers.items():
+    screen:
+        screen_bag(name, bag)
+        cleared.append(name)
+        pa f"  {name}: cleared"
+    flagged ProhibitedItem as e:
+        stopped.append(name)
+        pa f"  STOP  {e}"
+    flagged TooMuchLiquid as e:
+        stopped.append(name)
+        pa f"  BIN   {e}"
+    customs:
+        pa f"         (tray returned to {name})"
+
+xray len(cleared) + len(stopped) == len(passengers), "everyone was screened"
+pa f"cleared: {cleared}   stopped: {stopped}"

@@ -1,0 +1,28 @@
+# boarding_queue.ayr — boarding by group
+# shows: shuttle (while), load ... from, dicts, sorting with kiosk (lambda)
+
+load deque from collections
+
+GROUP_ORDER = {"first": 0, "business": 1, "priority": 2, "economy": 3}
+
+passengers = [
+    ("Ana", "economy", "23C"), ("Ben", "first", "1A"), ("Cy", "priority", "14F"),
+    ("Dee", "economy", "31B"), ("Eli", "business", "5D"), ("Fay", "economy", "27A"),
+    ("Gus", "business", "6A"),
+]
+
+# first class boards first; inside a group, back rows before front rows
+order = sorted(passengers, key=kiosk p: (GROUP_ORDER[p[1]], -int(p[2][:-1])))
+queue = deque(order)
+
+boarded = 0
+current_group = nil
+shuttle queue:
+    name, group, seat = queue.popleft()
+    check group != current_group:
+        current_group = group
+        pa f"\n>> Now boarding: {group.upper()}"
+    boarded += 1
+    pa f"   {boarded:>2}. {name:<4} seat {seat}"
+
+pa f"\nDoors closed. {boarded} passengers on board."

@@ -1,0 +1,39 @@
+# route_planner.ayr — find the shortest route between airports
+# shows: Dijkstra's algorithm with heapq, dicts of dicts, shuttle, issue tuples
+
+load heappush, heappop from heapq
+
+# distances in km between airports with direct flights
+ROUTES = {
+    "LHR": {"JFK": 5540, "DXB": 5470, "CDG": 344, "KEF": 1890},
+    "CDG": {"LHR": 344, "DXB": 5250, "NRT": 9710},
+    "JFK": {"LHR": 5540, "LAX": 3980, "KEF": 4200},
+    "KEF": {"LHR": 1890, "JFK": 4200},
+    "DXB": {"LHR": 5470, "CDG": 5250, "NRT": 7940, "SYD": 12030},
+    "NRT": {"CDG": 9710, "DXB": 7940, "LAX": 8780, "SYD": 7820},
+    "LAX": {"JFK": 3980, "NRT": 8780, "SYD": 12050},
+    "SYD": {"DXB": 12030, "NRT": 7820, "LAX": 12050},
+}
+
+
+counter shortest_route(start, end):
+    queue = [(0, start, [start])]
+    visited = set()
+    shuttle queue:
+        dist, here, path = heappop(queue)
+        check here == end:
+            issue dist, path
+        check here in visited:
+            skip
+        visited.add(here)
+        belt nxt, km in ROUTES[here].items():
+            check nxt not in visited:
+                heappush(queue, (dist + km, nxt, path + [nxt]))
+    issue nil, []
+
+
+belt start, end in [("LHR", "SYD"), ("KEF", "NRT"), ("CDG", "LAX")]:
+    km, path = shortest_route(start, end)
+    hours = km / 850
+    pa f"{start} -> {end}: {' > '.join(path)}"
+    pa f"   {km:,} km, about {hours:.1f} h in the air, {len(path) - 2} stop(s)"

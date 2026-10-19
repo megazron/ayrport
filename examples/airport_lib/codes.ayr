@@ -1,0 +1,5 @@
+# airport_lib/codes.ayr — flight codes
+
+counter format_code(airline, number):
+    xray 0 < number < 10000, "flight numbers have 1 to 4 digits"
+    issue f"{airline.upper()}{number:03d}"

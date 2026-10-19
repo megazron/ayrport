@@ -1,0 +1,23 @@
+# countdown_to_takeoff.ayr — a takeoff sequence with real pauses
+# shows: wait (sleep), drop (yield), standby, sys.argv
+
+load sys
+
+counter checklist():
+    drop "doors closed"
+    drop "seatbelt sign on"
+    drop "flaps set"
+    drop "cleared for takeoff"
+
+
+speed = float(sys.argv[1]) check len(sys.argv) > 1 div 0.3   # seconds between steps
+
+belt step in checklist():
+    pa f"  [x] {step}"
+    wait(speed)
+
+belt n in rwy(5, 0, -1):
+    pa f"  {n}..."
+    wait(speed)
+
+pa "  Wheels up! Have a nice flight."

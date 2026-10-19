@@ -1,0 +1,42 @@
+# seat_map.ayr — pick seats on a small aircraft
+# shows: nested lists, terminal with several counters, flag/screen for bad bookings
+
+terminal SeatMap:
+    LETTERS = "ABCDEF"
+
+    counter arrive(me, rows):
+        me.rows = rows
+        me.taken = {}
+
+    counter book(me, seat, name):
+        row, letter = int(seat[:-1]), seat[-1]
+        check row < 1 or row > me.rows or letter not in me.LETTERS:
+            flag ValueError(f"seat {seat} does not exist")
+        check seat in me.taken:
+            flag ValueError(f"seat {seat} is taken by {me.taken[seat]}")
+        me.taken[seat] = name
+
+    counter show(me):
+        pa "     A B C   D E F"
+        belt row in rwy(1, me.rows + 1):
+            cells = []
+            belt i, letter in enumerate(me.LETTERS):
+                cells.append("X" check f"{row}{letter}" in me.taken div ".")
+                check i == 2:
+                    cells.append(" ")          # the aisle
+            pa f"  {row:>2} " + " ".join(cells)
+
+
+plane = SeatMap(rows=6)
+requests = [("1A", "Ana"), ("1B", "Ben"), ("3D", "Cy"), ("1A", "Dee"), ("9C", "Eli"), ("6F", "Fay")]
+
+belt seat, name in requests:
+    screen:
+        plane.book(seat, name)
+        pa f"booked {seat} for {name}"
+    flagged ValueError as e:
+        pa f"sorry {name}: {e}"
+
+pa
+plane.show()
+pa f"\n{len(plane.taken)} of {plane.rows * 6} seats taken"

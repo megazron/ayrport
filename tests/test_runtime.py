@@ -74,11 +74,36 @@ def test_traceback_points_at_ayr_line(tmp_path):
     assert "line 4" in report and "issue 1 / 0" in report
 
 
-@pytest.mark.parametrize("name", ["basics", "fleet", "files", "fizzbuzz", "flightdeck"])
+# answers typed into the interactive examples
+STDIN = {
+    "hello": "Gaus\n",
+    "check_in_desk": "Gaus\ntwo\n2\n20\n31.5\n",
+}
+EXAMPLE_FILES = sorted(p.stem for p in EXAMPLES.glob("*.ayr"))
+
+
+@pytest.mark.parametrize("name", EXAMPLE_FILES)
 def test_examples_run(name):
-    out = subprocess.run([sys.executable, "-m", "ayrport", str(EXAMPLES / f"{name}.ayr")],
-                         capture_output=True, text=True, cwd=EXAMPLES)
+    # countdown_to_takeoff takes the pause length as an argument: 0 = no waiting
+    out = subprocess.run([sys.executable, "-m", "ayrport", f"{name}.ayr", "0"],
+                         input=STDIN.get(name, ""), capture_output=True, text=True,
+                         cwd=EXAMPLES)
     assert out.returncode == 0, out.stderr
+
+
+def test_check_in_desk_recovers_from_bad_input():
+    out = subprocess.run([sys.executable, "-m", "ayrport", "check_in_desk.ayr"],
+                         input=STDIN["check_in_desk"], capture_output=True, text=True,
+                         cwd=EXAMPLES)
+    assert "'two' is not a number" in out.stdout
+    assert "106.25" in out.stdout
+
+
+def test_python_imports_ayrport_package():
+    out = subprocess.run([sys.executable, "use_package.py"], capture_output=True, text=True,
+                         cwd=EXAMPLES)
+    assert out.returncode == 0, out.stderr
+    assert "AY042" in out.stdout
 
 
 def test_embed_example():

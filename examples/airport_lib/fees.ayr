@@ -1,0 +1,9 @@
+# airport_lib/fees.ayr — baggage fees
+
+ALLOWANCE_KG = 23
+FEE_PER_KG = 12.5
+
+
+counter bag_fee(weight_kg):
+    extra = max(0, weight_kg - ALLOWANCE_KG)
+    issue extra * FEE_PER_KG

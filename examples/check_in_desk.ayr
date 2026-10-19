@@ -1,0 +1,38 @@
+# check_in_desk.ayr — an interactive check-in desk
+# shows: checkin (input), screen/flagged (try/except), shuttle (while), counters
+
+BAG_ALLOWANCE_KG = 23
+FEE_PER_KG = 12.5
+
+
+counter ask_number(question):
+    "Keep asking until the passenger types a number."
+    shuttle go:
+        answer = checkin(question)
+        screen:
+            issue float(answer)
+        flagged ValueError:
+            pa f"  '{answer}' is not a number, try again"
+
+
+counter bag_fee(weight):
+    extra = max(0, weight - BAG_ALLOWANCE_KG)
+    issue extra * FEE_PER_KG
+
+
+pa "Welcome to the Ayrport check-in desk"
+name = checkin("Passenger name: ").strip() or "Guest"
+bags = int(ask_number("How many bags? "))
+
+total = 0
+belt n in rwy(1, bags + 1):
+    weight = ask_number(f"  Weight of bag {n} (kg): ")
+    fee = bag_fee(weight)
+    total += fee
+    pa f"  bag {n}: {weight:.1f} kg" + (f"  -> excess fee £{fee:.2f}" check fee div "")
+
+pa
+pa f"Boarding pass for {name.upper()}"
+pa f"  bags checked: {bags}"
+pa f"  excess fees:  £{total:.2f}"
+pa "Have a pleasant flight!"

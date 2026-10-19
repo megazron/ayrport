@@ -1,0 +1,44 @@
+# departures_board.ayr — a live-looking departures board
+# shows: terminal (class), counters (methods), belt (for), check/alt/div, f-string alignment
+
+terminal Flight:
+    counter arrive(me, code, dest, time, gate_no, delay=0):
+        me.code = code
+        me.dest = dest
+        me.time = time
+        me.gate_no = gate_no
+        me.delay = delay
+
+    counter status(me):
+        check me.delay < 0:
+            issue "CANCELLED"
+        alt me.delay == 0:
+            issue "ON TIME"
+        alt me.delay < 60:
+            issue f"DELAYED {me.delay}m"
+        div:
+            issue f"DELAYED {me.delay // 60}h{me.delay % 60:02d}"
+
+    counter row(me):
+        issue f"{me.time}  {me.code:<7} {me.dest:<14} {me.gate_no:>4}   {me.status()}"
+
+
+flights = [
+    Flight("AY204", "Lisbon", "09:40", "B12"),
+    Flight("AY101", "New York JFK", "08:15", "A3", delay=25),
+    Flight("AY330", "Tokyo HND", "11:05", "C7", delay=95),
+    Flight("AY018", "Dubai", "07:50", "A1"),
+    Flight("AY777", "Reykjavik", "10:30", "B4", delay=-1),
+]
+
+pa "=" * 52
+pa "  DEPARTURES".ljust(40), "AYRPORT T1"
+pa "=" * 52
+pa "TIME  FLIGHT  DESTINATION    GATE   STATUS"
+pa "-" * 52
+belt f in sorted(flights, key=kiosk f: f.time):
+    pa f.row()
+pa "-" * 52
+
+on_time = [f.code belt f in flights check f.delay == 0]
+pa f"{len(on_time)} of {len(flights)} flights on time: {', '.join(on_time)}"

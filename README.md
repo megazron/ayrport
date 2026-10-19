@@ -189,9 +189,16 @@ flight.ayr ──► lexer ──► token rewrite ──► Python source ─�
 
 ## Examples
 
-See [`examples/`](examples): `hello.ayr`, `basics.ayr` (the whole language),
-`fleet.ayr` (terminals and security), `files.ayr`, `fizzbuzz.ayr`, and
-`embed.py` (Ayrport from Python).
+[`examples/`](examples) has 18 programs, from `hello.ayr` to a departures
+board, a security line with custom errors, a baggage carousel built on
+generators, a seat map, a shortest-route planner, and an Ayrport package that
+plain Python imports. See [`examples/README.md`](examples/README.md) for the
+full list.
+
+```bash
+cd examples
+ayr departures_board.ayr
+```
 
 ## Develop
 

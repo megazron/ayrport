@@ -1,0 +1,40 @@
+# lost_and_found.ayr — save and load records with a file
+# shows: gate (with), load json, dicts, sets, counters with default values
+
+load json, os, tempfile
+
+LOG = os.path.join(tempfile.gettempdir(), "ayrport_lost_and_found.json")
+
+
+counter report(log, item, where, owner=nil):
+    log.append({"item": item, "where": where, "owner": owner})
+
+
+counter save(log):
+    gate open(LOG, "w") as f:
+        json.dump(log, f, indent=2)
+
+
+counter load_log():
+    check not os.path.exists(LOG):
+        issue []
+    gate open(LOG) as f:
+        issue json.load(f)
+
+
+found = []
+report(found, "umbrella", "gate B12")
+report(found, "passport", "security lane 3", owner="Ana")
+report(found, "teddy bear", "lounge")
+report(found, "headphones", "gate B12")
+save(found)
+
+records = load_log()
+pa f"{len(records)} items in the lost and found ({LOG})"
+belt r in records:
+    who = r["owner"] or "unknown owner"
+    pa f"  {r['item']:<11} found at {r['where']:<16} {who}"
+
+places = {r["where"] belt r in records}
+pa f"items were found in {len(places)} places: {sorted(places)}"
+os.remove(LOG)

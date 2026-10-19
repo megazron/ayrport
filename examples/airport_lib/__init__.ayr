@@ -1,0 +1,7 @@
+# airport_lib — an Ayrport package (a folder with __init__.ayr)
+# Python or Ayrport can `load` it: see use_package.ayr and use_package.py
+
+load bag_fee, FEE_PER_KG from airport_lib.fees
+load format_code from airport_lib.codes
+
+VERSION = "1.0"

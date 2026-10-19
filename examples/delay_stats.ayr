@@ -1,0 +1,29 @@
+# delay_stats.ayr — a week of delays as a text chart
+# shows: comprehensions, statistics module, dict building, string formatting
+
+load mean, median from statistics
+
+delays = {
+    "Mon": [0, 5, 12, 0, 45, 3],
+    "Tue": [0, 0, 2, 8, 0, 0],
+    "Wed": [30, 65, 12, 90, 20, 15],
+    "Thu": [0, 4, 0, 10, 0, 7],
+    "Fri": [15, 25, 40, 0, 55, 35],
+    "Sat": [0, 0, 0, 3, 0, 0],
+    "Sun": [10, 0, 5, 0, 20, 0],
+}
+
+averages = {day: mean(mins) belt day, mins in delays.items()}
+worst = max(averages, key=averages.get)
+
+pa "Average delay per day (minutes)"
+belt day, avg in averages.items():
+    bar = "#" * round(avg)
+    marker = "  <- worst" check day == worst div ""
+    pa f"  {day} {avg:5.1f} {bar}{marker}"
+
+every = [m belt mins in delays.values() belt m in mins]
+late = [m belt m in every check m > 15]
+pa
+pa f"flights: {len(every)}   median delay: {median(every)} min"
+pa f"late by over 15 min: {len(late)} ({len(late) / len(every):.0%})"

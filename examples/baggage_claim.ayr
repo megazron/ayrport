@@ -1,0 +1,36 @@
+# baggage_claim.ayr — the baggage belt
+# shows: drop (yield) generators, belt (for), skip (continue), leave (break)
+
+load random
+
+counter carousel(bags):
+    "Bags come out one at a time, like a real carousel."
+    belt bag in bags:
+        drop bag
+
+
+counter collect(owner, bags):
+    found = []
+    belt bag in carousel(bags):
+        check bag["owner"] != owner:
+            skip                         # not mine, let it go round
+        found.append(bag["tag"])
+        pa f"  {owner} grabbed {bag['tag']} ({bag['colour']})"
+        check len(found) == 2:
+            leave                        # both bags collected, head for the exit
+    issue found
+
+
+random.seed(7)
+owners = ["Ana", "Ben", "Cy"]
+colours = ["red", "blue", "black", "green"]
+bags = [
+    {"tag": f"AY{100 + i}", "owner": owners[i % 3], "colour": random.choice(colours)}
+    belt i in rwy(9)
+]
+random.shuffle(bags)
+
+pa "Belt 4 — flight AY204 from Lisbon"
+belt who in owners:
+    tags = collect(who, bags)
+    pa f"{who} leaves with {len(tags)} bags: {tags}"
