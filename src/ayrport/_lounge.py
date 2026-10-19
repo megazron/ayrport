@@ -79,7 +79,7 @@ def board() -> None:
         print("  The lounge is full right now. Try again in a moment.")
         return
     url = f"http://localhost:{server.server_address[1]}/"
-    print("  ✈  Now boarding the Ayrport lounge")
+    print("  >> Now boarding the Ayrport lounge")
     print(f"     {url}")
     print("     (Ctrl+C to deplane)")
     threading.Timer(0.3, _open, args=(url,)).start()
