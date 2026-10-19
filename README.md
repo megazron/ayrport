@@ -14,24 +14,22 @@ Short words, Python power. Runs anywhere Python runs.</p>
 </p>
 
 ```ayr
-load sqrt from math
+terminal Flight:
+    counter arrive(me, code, seats):
+        me.code = code
+        me.seats = seats
 
-hangar Aircraft:
-    fly prep(cap, callsign, seats):
-        cap.callsign = callsign
-        cap.seats = seats
-
-    fly status(cap, delay):
-        clr delay == 0:
-            land "ON TIME"
+    counter status(me, delay):
+        gate delay == 0:
+            depart "ON TIME"
         alt delay < 30:
-            land "DELAYED"
+            depart "DELAYED"
         div:
-            land "CANCELLED"
+            depart "CANCELLED"
 
-plane = Aircraft("AY101", 180)
-taxi d in [0, 12, 95]:
-    pa plane.callsign, plane.status(d)
+flight = Flight("AY101", 180)
+belt d in [0, 12, 95]:
+    pa flight.code, flight.status(d)
 ```
 
 ```
@@ -62,40 +60,41 @@ ayr words                 # list every Ayrport word
 
 ## The words
 
-Every keyword is short and comes from the airport.
+Every keyword comes from the airport terminal: counters, gates, belts,
+security, customs and lounges.
 
-| Ayrport  | Python          | Think of it as            |
-|----------|-----------------|---------------------------|
-| `pa`     | `print(...)`    | public announcement       |
-| `chkin`  | `input`         | check in                  |
-| `clr`    | `if`            | cleared for               |
-| `alt`    | `elif`          | alternate airport         |
-| `div`    | `else`          | divert                    |
-| `taxi`   | `for`           | taxi through each item    |
-| `hold`   | `while`         | holding pattern           |
-| `abort`  | `break`         | abort takeoff             |
-| `around` | `continue`      | go-around                 |
-| `idle`   | `pass`          | engines idling            |
-| `fly`    | `def`           | file a flight plan        |
-| `land`   | `return`        | land with a value         |
-| `jet`    | `lambda`        | small and fast            |
-| `drop`   | `yield`         | drop cargo, keep flying   |
-| `hangar` | `class`         | where aircraft are built  |
-| `prep`   | `__init__`      | pre-flight prep           |
-| `cap`    | `self`          | the captain (convention)  |
-| `pre`    | `try`           | pre-flight                |
-| `mayday` | `except`        | catch a distress call     |
-| `post`   | `finally`       | post-flight               |
-| `sos`    | `raise`         | send a distress call      |
-| `chk`    | `assert`        | checklist item            |
-| `gate`   | `with`          | open a gate, close after  |
-| `load`   | `import`        | load cargo                |
-| `go` / `nogo` / `nil` | `True` / `False` / `None` | |
-| `rwy`    | `range`         | a runway of numbers       |
-| `wait`   | `time.sleep`    | wait at the gate          |
+| Ayrport    | Python       | Think of it as                         |
+|------------|--------------|----------------------------------------|
+| `counter`  | `def`        | a counter does one job                 |
+| `depart`   | `return`     | the result departs the counter         |
+| `kiosk`    | `lambda`     | a tiny self-service counter            |
+| `terminal` | `class`      | a terminal groups counters             |
+| `arrive`   | `__init__`   | runs when a new object arrives         |
+| `me`       | `self`       | the object itself (convention)         |
+| `gate`     | `if`         | pass through this gate if ...          |
+| `alt`      | `elif`       | alternate gate                         |
+| `div`      | `else`       | divert everyone else                   |
+| `belt`     | `for`        | every bag on the baggage belt          |
+| `hold`     | `while`      | wait in the hold room while ...        |
+| `leave`    | `break`      | leave the loop                         |
+| `skip`     | `continue`   | skip to the next one                   |
+| `standby`  | `pass`       | on standby, do nothing                 |
+| `drop`     | `yield`      | bag drop: hand one over, keep going    |
+| `screen`   | `try`        | security screening                     |
+| `flagged`  | `except`     | caught at security                     |
+| `customs`  | `finally`    | everyone goes through customs          |
+| `flag`     | `raise`      | flag a problem                         |
+| `xray`     | `assert`     | x-ray check                            |
+| `lounge`   | `with`       | enter the lounge, tidied up after      |
+| `load`     | `import`     | load cargo                             |
+| `pa`       | `print(...)` | public announcement                    |
+| `chkin`    | `input`      | check-in                               |
+| `rwy`      | `range`      | a runway of numbers                    |
+| `wait`     | `time.sleep` | wait at the gate                       |
+| `go` / `nogo` / `nil` | `True` / `False` / `None` |              |
 
 `load sqrt, pi from math` is `from math import sqrt, pi`.
-A one-line choice reads `"on time" clr delay == 0 div "late"`.
+A one-line choice reads `"on time" gate delay == 0 div "late"`.
 
 Full guide: **[docs/language.md](docs/language.md)**.
 
@@ -110,10 +109,10 @@ import flightdeck                    # loads flightdeck.ayr
 
 print(flightdeck.eta(5600))
 
-ns = ayrport.run('fly hi(x):\n    land f"hi {x}"\n')   # run a snippet
+ns = ayrport.run('counter hi(x):\n    depart f"hi {x}"\n')   # run a snippet
 print(ns["hi"]("there"))
 
-print(ayrport.transpile('clr fuel < 10: pa "low fuel"'))
+print(ayrport.transpile('gate fuel < 10: pa "low fuel"'))
 # if fuel < 10: print("low fuel")
 ```
 
@@ -134,11 +133,11 @@ The [`vscode-extension`](vscode-extension) folder holds the Ayrport extension:
 syntax highlighting, hover cards that explain every word, completions,
 snippets, auto-indent, and a ▶ **Run** button (F5).
 
-**Install:** download `ayrport-1.0.0.vsix` from the
+**Install:** download `ayrport-1.1.0.vsix` from the
 [latest release](https://github.com/megazron/ayrport/releases/latest), then
 
 ```bash
-code --install-extension ayrport-1.0.0.vsix
+code --install-extension ayrport-1.1.0.vsix
 ```
 
 or in VS Code: *Extensions → ⋯ → Install from VSIX…*
@@ -150,7 +149,7 @@ Build it yourself with `cd vscode-extension && npx @vscode/vsce package`.
 ```
 MAYDAY MAYDAY MAYDAY - Runway length zero (ZeroDivisionError)
   at crash.ayr, line 4, in boom
-    land 1 / 0
+    depart 1 / 0
   division by zero
 ```
 
@@ -162,7 +161,7 @@ as line N of the Python it runs.
 ```
 flight.ayr ──► lexer ──► token rewrite ──► Python source ──► CPython
                  │            │
-     strings and comments     clr→if, fly→def, pa x→print(x),
+     strings and comments     gate→if, counter→def, pa x→print(x),
      are never touched        load a from m→from m import a
 ```
 
@@ -175,7 +174,7 @@ flight.ayr ──► lexer ──► token rewrite ──► Python source ─�
 ## Examples
 
 See [`examples/`](examples): `hello.ayr`, `basics.ayr` (the whole language),
-`fleet.ayr` (classes and errors), `files.ayr`, `fizzbuzz.ayr`, and
+`fleet.ayr` (terminals and security), `files.ayr`, `fizzbuzz.ayr`, and
 `embed.py` (Ayrport from Python).
 
 ## Develop

@@ -58,7 +58,7 @@ def new_namespace(name: str = "__main__", filename: str | None = None) -> dict:
 def run(source: str, namespace: dict | None = None, filename: str = "<ayrport>") -> dict:
     """Run Ayrport source and return the namespace it ran in.
 
-    >>> ns = run("fly double(x):\\n    land x * 2\\n")
+    >>> ns = run("counter double(x):\\n    depart x * 2\\n")
     >>> ns["double"](21)
     42
     """

@@ -56,7 +56,7 @@ def _statements(tokens: list[Token]):
     """Split the token stream into simple statements.
 
     A statement ends at a newline outside brackets, at a `;`, or at the colon
-    that opens a block (so `clr x: pa x` is two statements).
+    that opens a block (so `gate x: pa x` is two statements).
     """
     stmt: list[Token] = []
     depth = 0

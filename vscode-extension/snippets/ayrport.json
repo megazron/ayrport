@@ -1,61 +1,87 @@
 {
-  "Function (fly)": {
-    "prefix": "fly",
-    "body": ["fly ${1:name}(${2:args}):", "    ${3:idle}"],
+  "Counter (function)": {
+    "prefix": "counter",
+    "body": [
+      "counter ${1:name}(${2:args}):",
+      "    ${3:standby}"
+    ],
     "description": "Define a function"
   },
-  "If (clr)": {
-    "prefix": "clr",
-    "body": ["clr ${1:condition}:", "    ${2:idle}"],
-    "description": "Cleared for: if"
+  "Gate (if)": {
+    "prefix": "gate",
+    "body": [
+      "gate ${1:condition}:",
+      "    ${2:standby}"
+    ],
+    "description": "if"
   },
-  "If / else (clr div)": {
-    "prefix": "clrdiv",
-    "body": ["clr ${1:condition}:", "    ${2:idle}", "div:", "    ${3:idle}"],
+  "Gate / divert (if / else)": {
+    "prefix": "gatediv",
+    "body": [
+      "gate ${1:condition}:",
+      "    ${2:standby}",
+      "div:",
+      "    ${3:standby}"
+    ],
     "description": "if / else"
   },
-  "Loop (taxi)": {
-    "prefix": "taxi",
-    "body": ["taxi ${1:item} in ${2:items}:", "    ${3:pa $1}"],
+  "Belt (for)": {
+    "prefix": "belt",
+    "body": [
+      "belt ${1:bag} in ${2:bags}:",
+      "    ${3:pa $1}"
+    ],
     "description": "for loop"
   },
-  "Loop over range (taxi rwy)": {
-    "prefix": "taxir",
-    "body": ["taxi ${1:i} in rwy(${2:10}):", "    ${3:pa $1}"],
+  "Belt over runway (for range)": {
+    "prefix": "beltr",
+    "body": [
+      "belt ${1:i} in rwy(${2:10}):",
+      "    ${3:pa $1}"
+    ],
     "description": "for i in range(n)"
   },
-  "While (hold)": {
+  "Hold (while)": {
     "prefix": "hold",
-    "body": ["hold ${1:condition}:", "    ${2:idle}"],
+    "body": [
+      "hold ${1:condition}:",
+      "    ${2:standby}"
+    ],
     "description": "while loop"
   },
-  "Class (hangar)": {
-    "prefix": "hangar",
+  "Terminal (class)": {
+    "prefix": "terminal",
     "body": [
-      "hangar ${1:Name}:",
-      "    fly prep(cap${2:, arg}):",
-      "        ${3:cap.arg = arg}"
+      "terminal ${1:Name}:",
+      "    counter arrive(me${2:, arg}):",
+      "        ${3:me.arg = arg}"
     ],
     "description": "Define a class with a constructor"
   },
-  "Try (pre mayday)": {
-    "prefix": "pre",
+  "Screen (try / except)": {
+    "prefix": "screen",
     "body": [
-      "pre:",
-      "    ${1:idle}",
-      "mayday ${2:Exception} as ${3:e}:",
-      "    pa \"MAYDAY:\", $3"
+      "screen:",
+      "    ${1:standby}",
+      "flagged ${2:Exception} as ${3:e}:",
+      "    pa \"flagged:\", $3"
     ],
     "description": "try / except"
   },
-  "With (gate)": {
-    "prefix": "gate",
-    "body": ["gate open(${1:path}) as ${2:f}:", "    ${3:pa $2.read()}"],
+  "Lounge (with)": {
+    "prefix": "lounge",
+    "body": [
+      "lounge open(${1:path}) as ${2:f}:",
+      "    ${3:pa $2.read()}"
+    ],
     "description": "with block"
   },
   "Main guard": {
     "prefix": "main",
-    "body": ["clr __name__ == \"__main__\":", "    ${1:main()}"],
+    "body": [
+      "gate __name__ == \"__main__\":",
+      "    ${1:main()}"
+    ],
     "description": "Run only when executed directly"
   }
 }

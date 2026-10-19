@@ -1,16 +1,16 @@
 # flightdeck.ayr — an Ayrport module, imported from Python in embed.py
 
-fly eta(distance_km, speed_kmh=850):
+counter eta(distance_km, speed_kmh=850):
     "Hours to destination."
-    land round(distance_km / speed_kmh, 2)
+    depart round(distance_km / speed_kmh, 2)
 
-fly callsign(airline, number):
-    land f"{airline.upper()}{number:03d}"
+counter callsign(airline, number):
+    depart f"{airline.upper()}{number:03d}"
 
-hangar Runway:
-    fly prep(cap, name, length_m):
-        cap.name = name
-        cap.length_m = length_m
+terminal Runway:
+    counter arrive(me, name, length_m):
+        me.name = name
+        me.length_m = length_m
 
-    fly fits(cap, aircraft_needs_m):
-        land cap.length_m >= aircraft_needs_m
+    counter fits(me, aircraft_needs_m):
+        depart me.length_m >= aircraft_needs_m

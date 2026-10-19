@@ -1,4 +1,4 @@
-# hello.ayr — your first flight
+# hello.ayr — your first check-in
 pa "Welcome to Ayrport!"
 
 name = chkin("Passenger name? ")

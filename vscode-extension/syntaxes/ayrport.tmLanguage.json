@@ -3,13 +3,27 @@
   "name": "Ayrport",
   "scopeName": "source.ayrport",
   "patterns": [
-    { "include": "#comment" },
-    { "include": "#string" },
-    { "include": "#function-def" },
-    { "include": "#class-def" },
-    { "include": "#keywords" },
-    { "include": "#number" },
-    { "include": "#operator" }
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#string"
+    },
+    {
+      "include": "#function-def"
+    },
+    {
+      "include": "#class-def"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#number"
+    },
+    {
+      "include": "#operator"
+    }
   ],
   "repository": {
     "comment": {
@@ -21,23 +35,56 @@
         {
           "name": "string.quoted.triple.ayrport",
           "begin": "(?i)([rbuf]{0,2})(\"\"\"|''')",
-          "beginCaptures": { "1": { "name": "storage.type.string.ayrport" } },
+          "beginCaptures": {
+            "1": {
+              "name": "storage.type.string.ayrport"
+            }
+          },
           "end": "\\2",
-          "patterns": [{ "include": "#escape" }, { "include": "#interpolation" }]
+          "patterns": [
+            {
+              "include": "#escape"
+            },
+            {
+              "include": "#interpolation"
+            }
+          ]
         },
         {
           "name": "string.quoted.double.ayrport",
           "begin": "(?i)([rbuf]{0,2})(\")",
-          "beginCaptures": { "1": { "name": "storage.type.string.ayrport" } },
+          "beginCaptures": {
+            "1": {
+              "name": "storage.type.string.ayrport"
+            }
+          },
           "end": "(\")|(\\n)",
-          "patterns": [{ "include": "#escape" }, { "include": "#interpolation" }]
+          "patterns": [
+            {
+              "include": "#escape"
+            },
+            {
+              "include": "#interpolation"
+            }
+          ]
         },
         {
           "name": "string.quoted.single.ayrport",
           "begin": "(?i)([rbuf]{0,2})(')",
-          "beginCaptures": { "1": { "name": "storage.type.string.ayrport" } },
+          "beginCaptures": {
+            "1": {
+              "name": "storage.type.string.ayrport"
+            }
+          },
           "end": "(')|(\\n)",
-          "patterns": [{ "include": "#escape" }, { "include": "#interpolation" }]
+          "patterns": [
+            {
+              "include": "#escape"
+            },
+            {
+              "include": "#interpolation"
+            }
+          ]
         }
       ]
     },
@@ -49,29 +96,52 @@
       "name": "meta.interpolation.ayrport",
       "begin": "\\{(?!\\{)",
       "end": "\\}",
-      "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.ayrport" } },
-      "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.ayrport" } },
-      "patterns": [{ "include": "#keywords" }, { "include": "#number" }]
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.section.interpolation.begin.ayrport"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.section.interpolation.end.ayrport"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#keywords"
+        },
+        {
+          "include": "#number"
+        }
+      ]
     },
     "function-def": {
-      "match": "\\b(fly|def)\\s+([A-Za-z_]\\w*)",
+      "match": "\\b(counter|def)\\s+([A-Za-z_]\\w*)",
       "captures": {
-        "1": { "name": "storage.type.function.ayrport" },
-        "2": { "name": "entity.name.function.ayrport" }
+        "1": {
+          "name": "storage.type.function.ayrport"
+        },
+        "2": {
+          "name": "entity.name.function.ayrport"
+        }
       }
     },
     "class-def": {
-      "match": "\\b(hangar|class)\\s+([A-Za-z_]\\w*)",
+      "match": "\\b(terminal|class)\\s+([A-Za-z_]\\w*)",
       "captures": {
-        "1": { "name": "storage.type.class.ayrport" },
-        "2": { "name": "entity.name.type.class.ayrport" }
+        "1": {
+          "name": "storage.type.class.ayrport"
+        },
+        "2": {
+          "name": "entity.name.type.class.ayrport"
+        }
       }
     },
     "keywords": {
       "patterns": [
         {
           "name": "keyword.control.flow.ayrport",
-          "match": "\\b(clr|alt|div|hold|taxi|abort|around|land|drop|pre|mayday|post|sos|if|elif|else|while|for|break|continue|return|yield|try|except|finally|raise|await|async|match|case)\\b"
+          "match": "\\b(gate|alt|div|hold|belt|leave|skip|depart|drop|screen|flagged|customs|flag|if|elif|else|while|for|break|continue|return|yield|try|except|finally|raise|await|async|match|case)\\b"
         },
         {
           "name": "keyword.control.import.ayrport",
@@ -79,11 +149,11 @@
         },
         {
           "name": "keyword.other.ayrport",
-          "match": "\\b(gate|chk|idle|with|assert|pass|del|global|nonlocal)\\b"
+          "match": "\\b(lounge|xray|standby|with|assert|pass|del|global|nonlocal)\\b"
         },
         {
           "name": "storage.type.ayrport",
-          "match": "\\b(fly|hangar|jet|def|class|lambda)\\b"
+          "match": "\\b(counter|terminal|kiosk|def|class|lambda)\\b"
         },
         {
           "name": "keyword.operator.logical.ayrport",
@@ -99,11 +169,11 @@
         },
         {
           "name": "entity.name.function.magic.ayrport",
-          "match": "\\bprep\\b"
+          "match": "\\barrive\\b"
         },
         {
           "name": "variable.language.self.ayrport",
-          "match": "\\b(cap|self|cls)\\b"
+          "match": "\\b(me|self|cls)\\b"
         }
       ]
     },

@@ -1,8 +1,9 @@
 # The Ayrport language guide
 
-Ayrport is Python wearing a pilot's uniform. It has Python's indentation,
+Ayrport is Python in an airport uniform. It has Python's indentation,
 expressions, strings, numbers and standard library; what changes are the
-words. Every Ayrport word is short and comes from airports and flying.
+words. Every Ayrport word comes from the airport terminal: counters, gates,
+baggage belts, security, customs and lounges.
 
 Ayrport is a **superset** of Python: plain Python keywords still work, so you
 can mix them while learning. The words below are reserved and cannot be used
@@ -10,18 +11,18 @@ as variable names.
 
 ## Contents
 
-1. [Printing and input](#printing-and-input)
+1. [Announcements and check-in](#announcements-and-check-in)
 2. [Values](#values)
-3. [Decisions](#decisions)
-4. [Loops](#loops)
-5. [Functions](#functions)
-6. [Classes](#classes)
-7. [Errors](#errors)
-8. [Resources](#resources)
-9. [Loading code](#loading-code)
+3. [Gates (decisions)](#gates-decisions)
+4. [Belts and hold rooms (loops)](#belts-and-hold-rooms-loops)
+5. [Counters (functions)](#counters-functions)
+6. [Terminals (classes)](#terminals-classes)
+7. [Security (errors)](#security-errors)
+8. [Lounges (resources)](#lounges-resources)
+9. [Loading cargo (imports)](#loading-cargo-imports)
 10. [How it works](#how-it-works)
 
-## Printing and input
+## Announcements and check-in
 
 `pa` (public announcement) prints. No brackets needed.
 
@@ -31,7 +32,7 @@ pa "Gate", 12, sep=": "      # Gate: 12
 pa                           # empty line
 ```
 
-`chkin` (check in) reads a line from the user.
+`chkin` (check-in) reads a line from the user.
 
 ```ayr
 name = chkin("Name? ")
@@ -47,99 +48,104 @@ name = chkin("Name? ")
 
 `rwy(n)` (runway) is `range(n)`; `wait(s)` pauses for `s` seconds.
 
-## Decisions
+## Gates (decisions)
 
-`clr` (cleared for) is `if`, `alt` (alternate airport) is `elif`, `div`
-(divert) is `else`.
+`gate` is `if`: you pass through the gate when the condition holds. `alt`
+(alternate gate) is `elif`, and `div` (divert) is `else`.
 
 ```ayr
-clr fuel > 50:
-    pa "cleared for takeoff"
-alt fuel > 10:
-    pa "refuel first"
+gate bags <= 1:
+    pa "carry-on only"
+alt bags <= 3:
+    pa "check in at the counter"
 div:
-    pa "grounded"
+    pa "excess baggage fee"
 ```
 
 The same words make a one-line choice:
 
 ```ayr
-msg = "on time" clr delay == 0 div "delayed"
+msg = "on time" gate delay == 0 div "delayed"
 ```
 
-## Loops
+## Belts and hold rooms (loops)
 
-`taxi` is `for`, `hold` (holding pattern) is `while`.
+`belt` is `for`: every bag on the baggage belt goes past once.
 
 ```ayr
-taxi gate in rwy(1, 6):
-    pa "gate", gate
-
-hold altitude < 30000:
-    altitude += 1000
+belt bag in ["red", "blue", "green"]:
+    pa "collect", bag
 ```
 
-`abort` leaves the loop (`break`). `around` (go-around) skips to the next pass
-(`continue`). `idle` does nothing (`pass`).
-
-## Functions
-
-`fly` defines a function, `land` returns a value.
+`hold` is `while`: wait in the hold room while the condition holds.
 
 ```ayr
-fly fuel_needed(km, burn=3.2):
-    land km * burn
+hold queue:
+    pa "now serving", queue.pop(0)
 ```
 
-`jet` is a small anonymous function (`lambda`):
+`leave` exits the loop (`break`). `skip` jumps to the next pass
+(`continue`). `standby` does nothing (`pass`).
+
+## Counters (functions)
+
+A `counter` does one job (`def`). Its result `depart`s (`return`).
 
 ```ayr
-double = jet x: x * 2
+counter bag_fee(kg, rate=4.5):
+    depart kg * rate
 ```
 
-`drop` hands out values one at a time (`yield`):
+A `kiosk` is a tiny self-service counter (`lambda`):
 
 ```ayr
-fly countdown(n):
+double = kiosk x: x * 2
+```
+
+`drop` hands out values one at a time, like a bag drop (`yield`):
+
+```ayr
+counter countdown(n):
     hold n > 0:
         drop n
         n -= 1
 ```
 
-## Classes
+## Terminals (classes)
 
-A `hangar` builds aircraft (`class`). The constructor is `prep`, and by
-convention the first parameter is `cap`, the captain (Python's `self`).
+A `terminal` groups counters together (`class`). `arrive` runs when a new
+object arrives (`__init__`), and by convention the first parameter is `me`
+(Python's `self`).
 
 ```ayr
-hangar Aircraft:
-    fly prep(cap, callsign):
-        cap.callsign = callsign
+terminal Flight:
+    counter arrive(me, code):
+        me.code = code
 
-    fly hello(cap):
-        land f"This is {cap.callsign}"
+    counter hello(me):
+        depart f"This is flight {me.code}"
 
-hangar Jumbo(Aircraft):
-    fly prep(cap, callsign):
-        super().prep(callsign)
+terminal Charter(Flight):
+    counter arrive(me, code):
+        super().arrive(code)
 ```
 
-## Errors
+## Security (errors)
 
-| Ayrport  | Python    | Meaning                        |
-|----------|-----------|--------------------------------|
-| `pre`    | `try`     | pre-flight: code that may fail |
-| `mayday` | `except`  | catch a distress call          |
-| `post`   | `finally` | post-flight: always runs       |
-| `sos`    | `raise`   | send a distress call           |
-| `chk`    | `assert`  | checklist item                 |
+| Ayrport   | Python    | Meaning                         |
+|-----------|-----------|---------------------------------|
+| `screen`  | `try`     | security screening              |
+| `flagged` | `except`  | caught at security              |
+| `customs` | `finally` | everyone goes through customs   |
+| `flag`    | `raise`   | flag a problem                  |
+| `xray`    | `assert`  | x-ray check: must be true       |
 
 ```ayr
-pre:
-    plane.board("Ana")
-mayday OverbookedError as e:
-    pa "MAYDAY:", e
-post:
+screen:
+    flight.board("Ana")
+flagged OverbookedError as e:
+    pa "flagged:", e
+customs:
     pa "boarding closed"
 ```
 
@@ -148,20 +154,20 @@ When a program crashes, the tower reports it with the Ayrport line:
 ```
 MAYDAY MAYDAY MAYDAY - Runway length zero (ZeroDivisionError)
   at crash.ayr, line 2, in f
-    land x / 0
+    depart x / 0
   division by zero
 ```
 
-## Resources
+## Lounges (resources)
 
-`gate` opens something and closes it when the block ends (`with`).
+`lounge` opens something and tidies it up when the block ends (`with`).
 
 ```ayr
-gate open("manifest.txt") as f:
+lounge open("manifest.txt") as f:
     pa f.read()
 ```
 
-## Loading code
+## Loading cargo (imports)
 
 `load` is `import`. To take names out of a module, put `from` at the end:
 

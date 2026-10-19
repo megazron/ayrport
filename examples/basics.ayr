@@ -1,53 +1,52 @@
-# basics.ayr — the whole language on one runway
+# basics.ayr — the whole language in one terminal
 
 load sqrt, pi from math
 load random
 
-# functions: fly ... land
-fly fuel_needed(km, burn=3.2):
-    land km * burn
+# functions: counter ... depart
+counter fuel_needed(km, burn=3.2):
+    depart km * burn
 
-# if / elif / else: clr / alt / div
-fly status(delay):
-    clr delay == 0:
-        land "ON TIME"
+# if / elif / else: gate / alt / div
+counter status(delay):
+    gate delay == 0:
+        depart "ON TIME"
     alt delay < 30:
-        land "DELAYED"
+        depart "DELAYED"
     div:
-        land "CANCELLED"
+        depart "CANCELLED"
 
-# for: taxi ... in
-taxi d in [0, 12, 95]:
+# for: belt ... in
+belt d in [0, 12, 95]:
     pa f"delay {d:>3} min -> {status(d)}"
 
-# while: hold
-altitude = 0
-hold altitude < 30000:
-    altitude += 10000
-    pa "climbing to", altitude
+# while: hold (the hold room)
+queue = ["Ana", "Ben", "Cy"]
+hold queue:
+    pa "now serving", queue.pop(0)
 
-# break / continue: abort / around
-taxi gate_no in rwy(1, 10):
-    clr gate_no % 2 == 0:
-        around
-    clr gate_no > 7:
-        abort
+# break / continue: leave / skip
+belt gate_no in rwy(1, 10):
+    gate gate_no % 2 == 0:
+        skip
+    gate gate_no > 7:
+        leave
     pa "odd gate", gate_no
 
-# lambdas: jet
-double = jet x: x * 2
+# lambdas: kiosk
+double = kiosk x: x * 2
 pa "double 21 =", double(21)
 
-# ternary: clr ... div
+# one-line choice: gate ... div
 fuel = fuel_needed(500)
-pa "fuel ok" clr fuel < 2000 div "need more fuel"
+pa "fuel ok" gate fuel < 2000 div "need more fuel"
 
 # go / nogo / nil  (True / False / None)
-cleared = go
-pa "cleared:", cleared, "| nogo:", nogo, "| nil:", nil
+boarding = go
+pa "boarding:", boarding, "| nogo:", nogo, "| nil:", nil
 
-# generators: drop
-fly countdown(n):
+# generators: drop (bag drop)
+counter countdown(n):
     hold n > 0:
         drop n
         n -= 1

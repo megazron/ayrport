@@ -1,37 +1,37 @@
-# fleet.ayr — classes are hangars, `cap` (the captain) is self
+# fleet.ayr — classes are terminals, `me` is self, screen/flagged/customs is try/except/finally
 
-hangar Aircraft:
-    fly prep(cap, callsign, seats):
-        cap.callsign = callsign
-        cap.seats = seats
-        cap.onboard = []
+terminal Aircraft:
+    counter arrive(me, callsign, seats):
+        me.callsign = callsign
+        me.seats = seats
+        me.onboard = []
 
-    fly board(cap, passenger):
-        clr len(cap.onboard) >= cap.seats:
-            sos OverbookedError(f"{cap.callsign} is full")
-        cap.onboard.append(passenger)
+    counter board(me, passenger):
+        gate len(me.onboard) >= me.seats:
+            flag OverbookedError(f"{me.callsign} is full")
+        me.onboard.append(passenger)
 
-    fly __repr__(cap):
-        land f"<{cap.callsign} {len(cap.onboard)}/{cap.seats}>"
-
-
-hangar Jumbo(Aircraft):
-    fly prep(cap, callsign):
-        super().prep(callsign, seats=3)
+    counter __repr__(me):
+        depart f"<{me.callsign} {len(me.onboard)}/{me.seats}>"
 
 
-hangar OverbookedError(Exception):
-    idle
+terminal Jumbo(Aircraft):
+    counter arrive(me, callsign):
+        super().arrive(callsign, seats=3)
+
+
+terminal OverbookedError(Exception):
+    standby
 
 
 plane = Jumbo("AY101")
-taxi p in ["Ana", "Ben", "Cy", "Dee"]:
-    pre:
+belt p in ["Ana", "Ben", "Cy", "Dee"]:
+    screen:
         plane.board(p)
         pa "boarded", p
-    mayday OverbookedError as e:
+    flagged OverbookedError as e:
         pa "MAYDAY:", e
-    post:
+    customs:
         pa "  ", plane
 
-chk len(plane.onboard) == 3, "checklist: three on board"
+xray len(plane.onboard) == 3, "checklist: three on board"

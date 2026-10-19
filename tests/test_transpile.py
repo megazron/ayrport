@@ -4,25 +4,25 @@ from ayrport import transpile
 
 
 @pytest.mark.parametrize("ayr, py", [
-    ("clr x: idle", "if x: pass"),
-    ("alt x: idle", "elif x: pass"),
-    ("div: idle", "else: pass"),
-    ("hold go: abort", "while True: break"),
-    ("taxi i in rwy(3): around", "for i in range(3): continue"),
-    ("fly f(x): land x", "def f(x): return x"),
-    ("hangar A(B): idle", "class A(B): pass"),
-    ("pre: idle", "try: pass"),
-    ("mayday ValueError as e: sos", "except ValueError as e: raise"),
-    ("post: idle", "finally: pass"),
-    ("chk x, 'no'", "assert x, 'no'"),
-    ("gate open(p) as f: idle", "with open(p) as f: pass"),
-    ("f = jet x: x", "f = lambda x: x"),
+    ("gate x: standby", "if x: pass"),
+    ("alt x: standby", "elif x: pass"),
+    ("div: standby", "else: pass"),
+    ("hold go: leave", "while True: break"),
+    ("belt i in rwy(3): skip", "for i in range(3): continue"),
+    ("counter f(x): depart x", "def f(x): return x"),
+    ("terminal A(B): standby", "class A(B): pass"),
+    ("screen: standby", "try: pass"),
+    ("flagged ValueError as e: flag", "except ValueError as e: raise"),
+    ("customs: standby", "finally: pass"),
+    ("xray x, 'no'", "assert x, 'no'"),
+    ("lounge open(p) as f: standby", "with open(p) as f: pass"),
+    ("f = kiosk x: x", "f = lambda x: x"),
     ("drop 1", "yield 1"),
     ("x = nil", "x = None"),
     ("y = nogo", "y = False"),
-    ("a = 1 clr ok div 2", "a = 1 if ok else 2"),
-    ("fly prep(cap): idle", "def __init__(cap): pass"),
-    ("super().prep()", "super().__init__()"),
+    ("a = 1 gate ok div 2", "a = 1 if ok else 2"),
+    ("counter arrive(me): standby", "def __init__(me): pass"),
+    ("super().arrive()", "super().__init__()"),
 ])
 def test_keywords(ayr, py):
     assert transpile(ayr) == py
@@ -34,10 +34,10 @@ def test_keywords(ayr, py):
     ("pa", "print()"),
     ("pa x  # note", "print(x)  # note"),
     ("pa x; pa y", "print(x); print(y)"),
-    ("clr x: pa 'yes'", "clr x: pa 'yes'".replace("clr", "if").replace("pa 'yes'", "print('yes')")),
+    ("gate x: pa 'yes'", "if x: print('yes')"),
     ("pa(1)", "print((1))"),
     ("pa (1,\n    2)", "print((1,\n    2))"),
-    ("f = jet x: pa(x)", "f = lambda x: print(x)"),
+    ("f = kiosk x: pa(x)", "f = lambda x: print(x)"),
 ])
 def test_pa(ayr, py):
     assert transpile(ayr) == py
@@ -58,27 +58,27 @@ def test_load(ayr, py):
 
 
 def test_strings_and_comments_untouched():
-    src = 'x = "clr fly land pa"  # taxi hold abort\n'
+    src = 'x = "gate counter depart pa"  # belt hold leave\n'
     assert transpile(src) == src
 
 
 def test_triple_quoted_string_untouched():
-    src = 'doc = """fly\nland\n"""\n'
+    src = 'doc = """counter\ndepart\n"""\n'
     assert transpile(src) == src
 
 
 def test_fstring_expressions_are_translated():
-    assert transpile('s = f"{a clr ok div b} land"') == 's = f"{a if ok else b} land"'
+    assert transpile('s = f"{a gate ok div b} depart"') == 's = f"{a if ok else b} depart"'
     assert transpile("s = f'{{nil}} {nil}'") == "s = f'{{nil}} {None}'"
 
 
 def test_attribute_names_untouched():
-    assert transpile("plane.land()") == "plane.land()"
+    assert transpile("plane.depart()") == "plane.depart()"
     assert transpile("tower.go = 1") == "tower.go = 1"
 
 
 def test_line_numbers_preserved():
-    src = "load sqrt from math\nfly f(x):\n    pa x\n    land x\n"
+    src = "load sqrt from math\ncounter f(x):\n    pa x\n    depart x\n"
     assert transpile(src).count("\n") == src.count("\n")
 
 
