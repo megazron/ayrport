@@ -13,6 +13,10 @@ Short words, Python power. Runs anywhere Python runs.</p>
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT">
 </p>
 
+<p align="center">
+  <a href="https://megazron.github.io/ayrport/"><img src="docs/media/demo-studio.gif" width="860" alt="Typing an Ayrport program in Ayrport Studio and running it"></a>
+</p>
+
 ```ayr
 terminal Flight:
     counter arrive(me, code, seats):
@@ -41,8 +45,32 @@ AY101 CANCELLED
 ## Try it now — nothing to install
 
 **[▶ Open Ayrport Studio](https://megazron.github.io/ayrport/)** in any browser.
-Write code, press **Take off**, and learn the language step by step in
-**Flight School** (10 missions, with passport stamps to collect).
+Write code, press **Take off**, and watch the result land. Python runs right
+inside the page, so there is nothing to download.
+
+### Flight School
+
+Ten short missions teach the language one word at a time. Finish a mission to
+earn a passport stamp.
+
+<p align="center"><img src="docs/media/demo-flight-school.gif" width="860" alt="Completing a Flight School mission and earning a stamp"></p>
+
+### Programs that talk back
+
+`checkin` asks a question and waits for the answer, right in the output panel.
+
+<p align="center"><img src="docs/media/demo-checkin.gif" width="860" alt="Answering questions from the check-in desk example"></p>
+
+### More of the Studio
+
+| | |
+|---|---|
+| <img src="docs/media/studio-departures-board.png" alt="Departures board example"> | <img src="docs/media/studio-seat-map.png" alt="Seat map example"> |
+| A departures board, from the **Examples** menu | Booking seats on a seat map |
+| <img src="docs/media/studio-mayday.png" alt="An error report pointing at the line"> | <img src="docs/media/studio-flight-school.png" alt="Flight School lesson"> |
+| Mistakes get a plain-words **MAYDAY** and a red line | Every lesson has a story, a mission and a hint |
+| <img src="docs/media/studio-light.png" alt="Light theme"> | <img src="docs/media/studio-mobile.png" width="220" alt="Studio on a phone"> |
+| Light theme | Works on phones too |
 
 ## Install
 
