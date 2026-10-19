@@ -38,6 +38,12 @@ AY101 DELAYED
 AY101 CANCELLED
 ```
 
+## Try it now — nothing to install
+
+**[▶ Open Ayrport Studio](https://megazron.github.io/ayrport/)** in any browser.
+Write code, press **Take off**, and learn the language step by step in
+**Flight School** (10 missions, with passport stamps to collect).
+
 ## Install
 
 ```bash

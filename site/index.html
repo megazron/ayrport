@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ayrport Studio</title>
+<meta name="description" content="Write and run Ayrport, the programming language spoken in airport terms, right in your browser.">
+<link rel="icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b1220; --panel: #111a2e; --panel-2: #16223b; --line: #22304f;
+  --text: #e6ecf7; --muted: #8b9ab8; --amber: #ffb547; --amber-ink: #1a1203;
+  --blue: #5aa9ff; --green: #4ade80; --red: #ff6b6b; --violet: #c792ea; --teal: #5eead4;
+  --code-bg: #0d1526; --sel: #2a3d66;
+  --radius: 12px; --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --ui: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg: #f4f1ea; --panel: #fffdf8; --panel-2: #f1ece1; --line: #ddd5c4;
+  --text: #1d2433; --muted: #6b7385; --amber: #e08a00; --amber-ink: #fff;
+  --blue: #1f6fd6; --green: #138a43; --red: #c93636; --violet: #8a3fc2; --teal: #0f8b7e;
+  --code-bg: #fffdf8; --sel: #ffe2b0;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--ui); display: flex; flex-direction: column; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+kbd { font: 12px var(--mono); padding: 1px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+
+/* top bar */
+header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .08em; margin-right: 8px; }
+.brand img { width: 28px; height: 28px; border-radius: 7px; }
+.brand small { color: var(--muted); font-weight: 400; letter-spacing: 0; }
+.spacer { flex: 1; }
+.btn { border: 1px solid var(--line); background: var(--panel-2); border-radius: 10px; padding: 7px 12px; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); font-weight: 700; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.danger { color: var(--red); }
+.btn:disabled { opacity: .45; cursor: default; }
+select.btn { padding-right: 8px; }
+
+/* layout */
+main { flex: 1; display: flex; min-height: 0; }
+#school { width: 340px; border-right: 1px solid var(--line); background: var(--panel); overflow: auto; display: flex; flex-direction: column; }
+#school[hidden] { display: none; }
+.work { flex: 1; display: grid; grid-template-rows: auto auto 1fr; min-width: 0; min-height: 0; }
+.toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; flex-wrap: wrap; }
+.status { font-size: 13px; padding: 4px 10px; border-radius: 99px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.status.ok::before { background: var(--green); } .status.busy::before { background: var(--amber); animation: pulse 1s infinite; } .status.bad::before { background: var(--red); }
+@keyframes pulse { 50% { opacity: .3; } }
+.chips { display: flex; gap: 6px; padding: 0 16px 10px; overflow-x: auto; scrollbar-width: thin; }
+.chip { font: 13px var(--mono); padding: 4px 10px; border-radius: 99px; border: 1px solid var(--line); background: transparent; white-space: nowrap; }
+.chip:hover { border-color: var(--amber); color: var(--amber); }
+.panes { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; padding: 0 16px 16px; min-height: 0; }
+
+/* editor */
+.editor { position: relative; display: flex; background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; min-height: 300px; }
+.gutter { padding: 14px 8px 14px 12px; text-align: right; color: var(--muted); opacity: .6; font: 14px/22px var(--mono); user-select: none; overflow: hidden; min-width: 44px; white-space: pre; }
+.code-wrap { position: relative; flex: 1; min-width: 0; }
+.code-wrap textarea, .code-wrap pre { position: absolute; inset: 0; margin: 0; padding: 14px 14px 14px 6px; border: 0; font: 14px/22px var(--mono); tab-size: 4; white-space: pre; overflow: auto; }
+.code-wrap pre { pointer-events: none; color: var(--text); overflow: hidden; }
+.code-wrap textarea { background: transparent; color: transparent; caret-color: var(--amber); resize: none; outline: none; }
+.code-wrap textarea::selection { background: var(--sel); color: transparent; }
+.errline { position: absolute; left: 0; right: 0; height: 22px; background: color-mix(in srgb, var(--red) 18%, transparent); border-left: 3px solid var(--red); pointer-events: none; }
+.t-kw { color: var(--amber); font-weight: 600; } .t-def { color: var(--violet); font-weight: 600; }
+.t-fn { color: var(--blue); } .t-str { color: var(--green); } .t-num { color: var(--teal); }
+.t-com { color: var(--muted); font-style: italic; } .t-const { color: var(--teal); font-weight: 600; }
+.t-me { color: var(--red); font-style: italic; } .t-bi { color: var(--blue); }
+
+/* console */
+.console { display: flex; flex-direction: column; background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius); min-height: 0; overflow: hidden; }
+.console-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; letter-spacing: .06em; }
+#out { flex: 1; overflow: auto; padding: 12px 14px; font: 14px/22px var(--mono); white-space: pre-wrap; word-break: break-word; }
+#out .err { color: var(--red); } #out .sys { color: var(--muted); font-style: italic; } #out .echo { color: var(--amber); }
+.ask { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+.ask input { flex: 1; background: var(--panel-2); border: 1px solid var(--amber); border-radius: 8px; padding: 6px 10px; font: 14px var(--mono); outline: none; }
+.empty { color: var(--muted); font-family: var(--ui); }
+
+/* flight school */
+.school-head { padding: 16px; border-bottom: 1px solid var(--line); }
+.school-head h2 { margin: 0 0 4px; font-size: 18px; }
+.stamps { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.stamp { width: 26px; height: 26px; border-radius: 50%; border: 2px dashed var(--line); display: grid; place-items: center; font-size: 11px; color: var(--muted); cursor: pointer; background: none; padding: 0; }
+.stamp.done { border: 2px solid var(--amber); color: var(--amber); font-weight: 700; }
+.stamp.here { outline: 2px solid var(--blue); outline-offset: 2px; }
+.lesson { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.lesson h3 { margin: 0; font-size: 20px; }
+.lesson .kicker { color: var(--amber); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+.lesson p { margin: 0; color: var(--text); }
+.lesson code { font: 13px var(--mono); background: var(--panel-2); padding: 1px 5px; border-radius: 5px; }
+.mission { border: 1px solid var(--amber); border-radius: var(--radius); padding: 12px; background: color-mix(in srgb, var(--amber) 8%, transparent); }
+.mission b { color: var(--amber); }
+.hint { color: var(--muted); font-size: 14px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.result { border-radius: var(--radius); padding: 10px 12px; font-weight: 500; }
+.result.win { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
+.result.try { background: color-mix(in srgb, var(--red) 12%, transparent); color: var(--red); }
+
+/* dialogs */
+.overlay { position: fixed; inset: 0; background: rgb(0 0 0 / .55); display: grid; place-items: center; z-index: 20; padding: 16px; }
+.overlay[hidden] { display: none; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 24px; max-width: 520px; width: 100%; box-shadow: 0 20px 60px rgb(0 0 0 / .4); }
+.card h2 { margin: 0 0 8px; }
+.pass { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; border: 1px dashed var(--line); border-radius: 12px; padding: 14px; margin: 14px 0; font: 13px var(--mono); }
+.pass span { color: var(--muted); }
+.steps { display: grid; gap: 8px; margin: 14px 0 18px; }
+.steps div { display: flex; gap: 10px; align-items: baseline; }
+.steps b { color: var(--amber); font-family: var(--mono); }
+#lounge { position: fixed; inset: 0; z-index: 30; background: #000; }
+#lounge[hidden] { display: none; }
+#lounge iframe { width: 100%; height: 100%; border: 0; }
+#lounge button { position: absolute; top: 12px; right: 12px; z-index: 2; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); background: var(--panel); border: 1px solid var(--amber); padding: 12px 18px; border-radius: 12px; opacity: 0; transition: .3s; z-index: 40; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateX(-50%); }
+.bigstamp { position: fixed; inset: 0; display: grid; place-items: center; z-index: 35; pointer-events: none; }
+.bigstamp div { border: 6px double var(--amber); color: var(--amber); border-radius: 50%; width: 220px; height: 220px; display: grid; place-items: center; text-align: center; font: 700 22px/1.2 var(--mono); transform: rotate(-12deg) scale(2.2); opacity: 0; background: color-mix(in srgb, var(--panel) 85%, transparent); animation: stamp 1.8s ease-out forwards; }
+@keyframes stamp { 15% { transform: rotate(-12deg) scale(1); opacity: 1; } 80% { opacity: 1; } 100% { transform: rotate(-12deg) scale(1); opacity: 0; } }
+
+@media (max-width: 1000px) {
+  main { flex-direction: column; }
+  #school { width: auto; border-right: 0; border-bottom: 1px solid var(--line); max-height: 45vh; }
+  .panes { grid-template-columns: 1fr; grid-template-rows: minmax(280px, 1fr) minmax(200px, .8fr); }
+}
+@media (max-width: 600px) {
+  header .label { display: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><img src="icon.png" alt=""> AYRPORT <small>Studio</small></div>
+  <button class="btn" id="schoolBtn" title="Lessons with missions and passport stamps">🎓 <span class="label">Flight School</span></button>
+  <select class="btn" id="examples" title="Open an example program"><option value="">📂 Examples…</option></select>
+  <div class="spacer"></div>
+  <button class="btn" id="newBtn" title="Start a new program">✚ <span class="label">New</span></button>
+  <button class="btn" id="openBtn" title="Open an .ayr file from your computer">⤒ <span class="label">Open</span></button>
+  <button class="btn" id="saveBtn" title="Download this program as an .ayr file">⤓ <span class="label">Save</span></button>
+  <button class="btn" id="shareBtn" title="Copy a link to this program">🔗 <span class="label">Share</span></button>
+  <button class="btn" id="soundBtn" title="Sounds on/off">🔔</button>
+  <button class="btn" id="themeBtn" title="Light / dark">◐</button>
+  <input type="file" id="fileInput" accept=".ayr,.txt,text/plain" hidden>
+</header>
+
+<main>
+  <aside id="school" hidden>
+    <div class="school-head">
+      <h2>🎓 Flight School</h2>
+      <div class="hint">Finish each mission to earn a passport stamp.</div>
+      <div class="stamps" id="stamps"></div>
+    </div>
+    <div class="lesson" id="lesson"></div>
+  </aside>
+
+  <section class="work">
+    <div class="toolbar">
+      <button class="btn primary" id="runBtn" title="Run your program (Ctrl+Enter)">▶ Take off</button>
+      <button class="btn danger" id="stopBtn" disabled title="Stop the program">■ Stop</button>
+      <span class="status" id="status">Boarding Python…</span>
+      <div class="spacer"></div>
+      <span class="hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> to run</span>
+    </div>
+    <div class="chips" id="chips" aria-label="Insert a word"></div>
+    <div class="panes">
+      <div class="editor">
+        <div class="gutter" id="gutter">1</div>
+        <div class="code-wrap">
+          <div class="errline" id="errline" hidden></div>
+          <pre aria-hidden="true"><code id="hl"></code></pre>
+          <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Your Ayrport program"></textarea>
+        </div>
+      </div>
+      <div class="console">
+        <div class="console-head"><span>ARRIVALS · OUTPUT</span><button class="btn" id="clearBtn" style="padding:2px 10px">Clear</button></div>
+        <div id="out"><div class="empty">Press <b>▶ Take off</b> to run your program. What it announces lands here.</div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="overlay" id="welcome" hidden>
+  <div class="card">
+    <h2>✈ Welcome to Ayrport</h2>
+    <p>A programming language spoken in airport terms. No installing, no setup — it all runs right here in your browser.</p>
+    <div class="steps">
+      <div><b>1</b> Write your program on the left (or tap a word chip to add one).</div>
+      <div><b>2</b> Press <b style="font-family:var(--ui)">▶ Take off</b>.</div>
+      <div><b>3</b> Watch the result land on the right.</div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="startSchool">🎓 Start Flight School</button>
+      <button class="btn" id="justExplore">Just explore</button>
+    </div>
+  </div>
+</div>
+
+<div id="lounge" hidden><button class="btn" id="loungeClose">✕ Back to Studio</button><iframe title="Lounge" allow="geolocation; autoplay; fullscreen"></iframe></div>
+<div class="toast" id="toast"></div>
+
+<script src="studio.js"></script>
+</body>
+</html>

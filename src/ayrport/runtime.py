@@ -111,7 +111,7 @@ def explain(exc: BaseException, source_lines: list[str] | None = None) -> str:
         lines.append(f"  {exc.msg}")
         return "\n".join(lines)
     frames = [f for f in traceback.extract_tb(exc.__traceback__)
-              if not f.filename.startswith(os.path.dirname(__file__))]
+              if not f.filename.startswith(os.path.dirname(__file__)) and f.filename != "<exec>"]
     for fr in frames:
         lines.append(f"  at {fr.filename}, line {fr.lineno}, in {fr.name}")
         code = linecache.getline(fr.filename, fr.lineno).strip()

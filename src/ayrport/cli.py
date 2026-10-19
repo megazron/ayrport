@@ -19,6 +19,8 @@ from .runtime import HELPERS, explain, run_file
 from .transpiler import transpile
 from .words import MEANINGS
 
+STUDIO_URL = "https://megazron.github.io/ayrport/"
+
 BANNER = (
     f"Ayrport {__version__} tower — Python {sys.version.split()[0]}\n"
     "Type `words()` for the vocabulary, Ctrl-D to close the tower."
@@ -102,7 +104,7 @@ def cmd_repl() -> int:
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
-    commands = {"build", "check", "words", "run", "tower"}
+    commands = {"build", "check", "words", "run", "tower", "studio"}
     # `ayr file.ayr args...` is the short form of `ayr run file.ayr args...`
     if argv and argv[0] not in commands and not argv[0].startswith("-"):
         return cmd_run(argv[0], argv[1:])
@@ -120,6 +122,7 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("files", nargs="+")
     sub.add_parser("words", help="list every Ayrport word")
     sub.add_parser("tower", help="interactive prompt (same as plain `ayr`)")
+    sub.add_parser("studio", help="open Ayrport Studio in your browser")
     a = p.parse_args(argv)
 
     if a.cmd == "run":
@@ -128,6 +131,11 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_build(a.file, a.out)
     if a.cmd == "check":
         return cmd_check(a.files)
+    if a.cmd == "studio":
+        import webbrowser
+        webbrowser.open(STUDIO_URL)
+        print(f"Ayrport Studio: {STUDIO_URL}")
+        return 0
     if a.cmd == "words":
         words()
         return 0

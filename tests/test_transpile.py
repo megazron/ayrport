@@ -104,3 +104,7 @@ def test_vscode_words_match_language():
 
     words = Path(__file__).resolve().parent.parent / "vscode-extension" / "words.json"
     assert json.loads(words.read_text(encoding="utf-8")) == MEANINGS
+
+
+def test_hela_onboard_statement():
+    assert transpile("hela onboard") == '__import__("ayrport._lounge")._lounge.board()'

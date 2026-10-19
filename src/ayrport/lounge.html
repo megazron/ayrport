@@ -1,0 +1,1147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ayrport Lounge</title>
+<style>
+:root { --ink: #f3efe6; --muted: #9aa3b5; --amber: #ffb547; --glass: rgb(12 16 28 / .72); --line: rgb(255 255 255 / .12); --mono: ui-monospace, "JetBrains Mono", Consolas, monospace; --ui: system-ui, -apple-system, "Segoe UI", sans-serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #05070d; color: var(--ink); font: 14px/1.45 var(--ui); overflow: hidden; }
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; cursor: pointer; }
+button, input, select { font: inherit; color: inherit; }
+.glass { background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: 14px; }
+#hud { position: fixed; inset: 0; pointer-events: none; transition: opacity .4s; }
+#hud.hidden { opacity: 0; }
+#hud > * { pointer-events: auto; }
+#banner { position: absolute; left: 16px; top: 16px; padding: 12px 16px; max-width: min(440px, calc(100vw - 32px)); }
+#greet { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--amber); }
+#where { font-size: 18px; font-weight: 600; }
+#meta { color: var(--muted); font: 12px var(--mono); margin-top: 2px; }
+#tools { position: absolute; right: 16px; top: 16px; display: flex; gap: 6px; padding: 6px; }
+#tools button { background: none; border: 0; width: 34px; height: 34px; border-radius: 9px; cursor: pointer; font-size: 15px; }
+#tools button:hover { background: rgb(255 255 255 / .08); }
+#prompt { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); padding: 8px 14px; font-size: 14px; white-space: nowrap; display: none; }
+#prompt kbd, .card kbd { font: 12px var(--mono); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; margin-right: 6px; background: rgb(255 255 255 / .06); }
+#flightbar { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); padding: 14px 18px; display: none; }
+#fb-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+#fb-route { font: 13px var(--mono); color: var(--muted); }
+#fb-time { font: 600 34px var(--mono); letter-spacing: .04em; }
+#fb-track { position: relative; height: 4px; background: rgb(255 255 255 / .12); border-radius: 4px; margin: 12px 0 10px; }
+#fb-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--amber); border-radius: 4px; }
+#fb-plane { position: absolute; top: -9px; font-size: 16px; transform: translateX(-50%) rotate(90deg); }
+#fb-row { display: flex; gap: 8px; justify-content: flex-end; }
+#toast { position: absolute; left: 50%; top: 18px; transform: translate(-50%, -10px); padding: 10px 16px; opacity: 0; transition: .35s; max-width: min(520px, calc(100vw - 32px)); text-align: center; pointer-events: none; }
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#modal { position: fixed; inset: 0; display: none; place-items: center; padding: 16px; background: rgb(0 0 0 / .35); z-index: 5; }
+#modal.open { display: grid; }
+.card { width: min(480px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 22px; }
+.card h2 { margin: 0 0 6px; font-size: 20px; }
+.card h3 { margin: 16px 0 6px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.card p { margin: 6px 0; }
+.muted { color: var(--muted); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.btn { background: rgb(255 255 255 / .06); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; cursor: pointer; }
+.btn:hover { border-color: rgb(255 255 255 / .35); }
+.btn.go { background: var(--amber); color: #1b1203; border-color: var(--amber); font-weight: 700; }
+.btn.sel { border-color: var(--amber); color: var(--amber); }
+.field { width: 100%; background: rgb(255 255 255 / .06); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; outline: none; }
+.field:focus { border-color: var(--amber); }
+.pass { border: 1px dashed rgb(255 255 255 / .25); border-radius: 12px; padding: 14px; margin: 14px 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 14px; font: 13px var(--mono); }
+.pass span { display: block; font-size: 10px; color: var(--muted); letter-spacing: .12em; }
+.pass b { font-size: 16px; }
+.board { font: 13px var(--mono); border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+.board div { display: grid; grid-template-columns: 62px 1fr 44px 92px 24px; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--line); align-items: center; }
+.board div:first-child { border-top: 0; color: var(--muted); font-size: 11px; letter-spacing: .1em; }
+.board .st { color: var(--amber); cursor: pointer; }
+.board .done { color: #6ee7a8; }
+.board .x { background: none; border: 0; color: var(--muted); cursor: pointer; }
+.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.stats div { background: rgb(255 255 255 / .05); border-radius: 10px; padding: 10px 12px; }
+.stats b { display: block; font: 600 20px var(--mono); }
+.stamps { display: flex; flex-wrap: wrap; gap: 8px; }
+.stamp { width: 54px; height: 54px; border-radius: 50%; border: 2px solid; display: grid; place-items: center; font: 700 13px var(--mono); transform: rotate(var(--r)); }
+.secrets { display: flex; flex-wrap: wrap; gap: 6px; }
+.secrets span { padding: 4px 9px; border-radius: 99px; background: rgb(255 255 255 / .06); font-size: 13px; }
+.piano { position: relative; display: flex; height: 150px; margin-top: 12px; user-select: none; touch-action: none; }
+.wk { flex: 1; background: #f4f1ea; border: 1px solid #222; border-radius: 0 0 6px 6px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; color: #888; font: 10px var(--mono); cursor: pointer; }
+.bk { position: absolute; top: 0; width: 6%; height: 60%; background: #15171d; border-radius: 0 0 4px 4px; z-index: 2; color: #777; font: 9px var(--mono); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; cursor: pointer; }
+.wk.down { background: var(--amber); } .bk.down { background: #8a5a00; }
+input[type=range] { accent-color: var(--amber); width: 100%; }
+label.slider { display: grid; grid-template-columns: 90px 1fr; gap: 10px; align-items: center; margin: 8px 0; }
+.big { font: 600 15px var(--mono); }
+@media (max-width: 560px) { #banner { right: 16px; } #tools { top: auto; bottom: 16px; right: 50%; transform: translateX(50%); } #prompt, #flightbar { bottom: 72px; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div id="banner" class="glass"><div id="greet">Welcome</div><div id="where">Finding your airport…</div><div id="meta"></div></div>
+  <div id="tools" class="glass">
+    <button id="t-board" title="Departures board: your tasks (B)">🗒</button>
+    <button id="t-passport" title="Passport (P)">🛂</button>
+    <button id="t-sound" title="Sound (M)">♪</button>
+    <button id="t-zen" title="Focus view: hide everything (H)">◐</button>
+    <button id="t-full" title="Fullscreen (F)">⛶</button>
+    <button id="t-help" title="How it works (?)">?</button>
+  </div>
+  <div id="prompt" class="glass"></div>
+  <div id="flightbar" class="glass">
+    <div id="fb-top"><div id="fb-route"></div><div id="fb-label" class="muted"></div></div>
+    <div id="fb-time">25:00</div>
+    <div id="fb-track"><div id="fb-fill"></div><div id="fb-plane">✈</div></div>
+    <div id="fb-row"><button class="btn" id="fb-pause">Pause</button><button class="btn" id="fb-divert">Divert</button></div>
+  </div>
+  <div id="toast" class="glass"></div>
+</div>
+<div id="modal"><div class="card glass" id="card"></div></div>
+
+<script>
+"use strict";
+// ======================================================================= basics
+let W = 320;
+const H = 180, WORLD = 1040, FLOOR = 112;
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+cv.width = W; cv.height = H;
+const $ = (s) => document.querySelector(s);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+function hashStr(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const pick = (r, arr) => arr[Math.floor(r() * arr.length)];
+function hex(c) { const n = parseInt(c.slice(1), 16); return [n >> 16, n >> 8 & 255, n & 255]; }
+function mix(a, b, t) { const x = hex(a), y = hex(b); return `rgb(${x.map((v, i) => Math.round(lerp(v, y[i], t))).join(",")})`; }
+const today = () => new Date().toISOString().slice(0, 10);
+const store = {
+  load() { try { return JSON.parse(localStorage.getItem("ayr.lounge")) || {}; } catch { return {}; } },
+  save() { try { localStorage.setItem("ayr.lounge", JSON.stringify(S)); } catch { /* private mode */ } },
+};
+
+// ======================================================================= airports
+// iata, name, city, country, lat, lon, timezone, scenery (c city, m mountains, s sea, d desert, f forest)
+const AIRPORTS = `LHR|Heathrow|London|GB|51.47|-0.45|Europe/London|c
+LGW|Gatwick|London|GB|51.15|-0.18|Europe/London|f
+MAN|Manchester|Manchester|GB|53.35|-2.27|Europe/London|c
+EDI|Edinburgh|Edinburgh|GB|55.95|-3.37|Europe/London|m
+DUB|Dublin|Dublin|IE|53.42|-6.27|Europe/Dublin|s
+CDG|Charles de Gaulle|Paris|FR|49.01|2.55|Europe/Paris|c
+NCE|Côte d'Azur|Nice|FR|43.66|7.21|Europe/Paris|s
+AMS|Schiphol|Amsterdam|NL|52.31|4.76|Europe/Amsterdam|c
+BRU|Brussels|Brussels|BE|50.90|4.48|Europe/Brussels|c
+FRA|Frankfurt|Frankfurt|DE|50.03|8.57|Europe/Berlin|c
+MUC|Munich|Munich|DE|48.35|11.79|Europe/Berlin|m
+BER|Brandenburg|Berlin|DE|52.37|13.50|Europe/Berlin|c
+ZRH|Zurich|Zurich|CH|47.46|8.55|Europe/Zurich|m
+GVA|Geneva|Geneva|CH|46.24|6.11|Europe/Zurich|m
+VIE|Vienna|Vienna|AT|48.11|16.57|Europe/Vienna|c
+CPH|Kastrup|Copenhagen|DK|55.62|12.65|Europe/Copenhagen|s
+OSL|Gardermoen|Oslo|NO|60.19|11.10|Europe/Oslo|f
+ARN|Arlanda|Stockholm|SE|59.65|17.92|Europe/Stockholm|f
+HEL|Helsinki-Vantaa|Helsinki|FI|60.32|24.96|Europe/Helsinki|f
+KEF|Keflavík|Reykjavík|IS|63.98|-22.61|Atlantic/Reykjavik|m
+MAD|Barajas|Madrid|ES|40.49|-3.57|Europe/Madrid|c
+BCN|El Prat|Barcelona|ES|41.30|2.08|Europe/Madrid|s
+PMI|Son Sant Joan|Palma|ES|39.55|2.74|Europe/Madrid|s
+LIS|Humberto Delgado|Lisbon|PT|38.77|-9.13|Europe/Lisbon|s
+FCO|Fiumicino|Rome|IT|41.80|12.25|Europe/Rome|c
+MXP|Malpensa|Milan|IT|45.63|8.72|Europe/Rome|m
+VCE|Marco Polo|Venice|IT|45.51|12.35|Europe/Rome|s
+ATH|Eleftherios Venizelos|Athens|GR|37.94|23.94|Europe/Athens|s
+IST|Istanbul|Istanbul|TR|41.26|28.74|Europe/Istanbul|s
+WAW|Chopin|Warsaw|PL|52.17|20.97|Europe/Warsaw|c
+PRG|Václav Havel|Prague|CZ|50.10|14.26|Europe/Prague|c
+BUD|Ferenc Liszt|Budapest|HU|47.44|19.26|Europe/Budapest|c
+OTP|Henri Coandă|Bucharest|RO|44.57|26.10|Europe/Bucharest|c
+KBP|Boryspil|Kyiv|UA|50.34|30.89|Europe/Kyiv|c
+SVO|Sheremetyevo|Moscow|RU|55.97|37.41|Europe/Moscow|f
+DXB|Dubai International|Dubai|AE|25.25|55.36|Asia/Dubai|d
+AUH|Zayed International|Abu Dhabi|AE|24.43|54.65|Asia/Dubai|d
+DOH|Hamad|Doha|QA|25.27|51.61|Asia/Qatar|d
+RUH|King Khalid|Riyadh|SA|24.96|46.70|Asia/Riyadh|d
+JED|King Abdulaziz|Jeddah|SA|21.68|39.16|Asia/Riyadh|s
+TLV|Ben Gurion|Tel Aviv|IL|32.01|34.89|Asia/Jerusalem|s
+AMM|Queen Alia|Amman|JO|31.72|35.99|Asia/Amman|d
+CAI|Cairo International|Cairo|EG|30.12|31.41|Africa/Cairo|d
+CMN|Mohammed V|Casablanca|MA|33.37|-7.59|Africa/Casablanca|d
+ADD|Bole|Addis Ababa|ET|8.98|38.80|Africa/Addis_Ababa|m
+NBO|Jomo Kenyatta|Nairobi|KE|-1.32|36.93|Africa/Nairobi|f
+LOS|Murtala Muhammed|Lagos|NG|6.58|3.32|Africa/Lagos|c
+ACC|Kotoka|Accra|GH|5.61|-0.17|Africa/Accra|s
+JNB|O. R. Tambo|Johannesburg|ZA|-26.14|28.24|Africa/Johannesburg|c
+CPT|Cape Town International|Cape Town|ZA|-33.97|18.60|Africa/Johannesburg|m
+DAR|Julius Nyerere|Dar es Salaam|TZ|-6.88|39.20|Africa/Dar_es_Salaam|s
+MRU|Sir Seewoosagur Ramgoolam|Mauritius|MU|-20.43|57.68|Indian/Mauritius|s
+DEL|Indira Gandhi|Delhi|IN|28.56|77.10|Asia/Kolkata|c
+BOM|Chhatrapati Shivaji Maharaj|Mumbai|IN|19.09|72.87|Asia/Kolkata|s
+BLR|Kempegowda|Bengaluru|IN|13.20|77.71|Asia/Kolkata|c
+HYD|Rajiv Gandhi|Hyderabad|IN|17.24|78.43|Asia/Kolkata|c
+MAA|Chennai International|Chennai|IN|12.99|80.17|Asia/Kolkata|s
+CCU|Netaji Subhas Chandra Bose|Kolkata|IN|22.65|88.45|Asia/Kolkata|c
+GOI|Dabolim|Goa|IN|15.38|73.83|Asia/Kolkata|s
+CMB|Bandaranaike|Colombo|LK|7.18|79.88|Asia/Colombo|s
+DAC|Hazrat Shahjalal|Dhaka|BD|23.84|90.40|Asia/Dhaka|c
+KHI|Jinnah|Karachi|PK|24.91|67.16|Asia/Karachi|s
+ISB|Islamabad International|Islamabad|PK|33.55|72.83|Asia/Karachi|m
+KTM|Tribhuvan|Kathmandu|NP|27.70|85.36|Asia/Kathmandu|m
+MLE|Velana|Malé|MV|4.19|73.53|Indian/Maldives|s
+BKK|Suvarnabhumi|Bangkok|TH|13.69|100.75|Asia/Bangkok|c
+HKT|Phuket International|Phuket|TH|8.11|98.31|Asia/Bangkok|s
+SIN|Changi|Singapore|SG|1.36|103.99|Asia/Singapore|c
+KUL|KLIA|Kuala Lumpur|MY|2.74|101.71|Asia/Kuala_Lumpur|f
+CGK|Soekarno-Hatta|Jakarta|ID|-6.13|106.66|Asia/Jakarta|c
+DPS|Ngurah Rai|Bali|ID|-8.75|115.17|Asia/Makassar|s
+MNL|Ninoy Aquino|Manila|PH|14.51|121.02|Asia/Manila|s
+SGN|Tan Son Nhat|Ho Chi Minh City|VN|10.82|106.66|Asia/Ho_Chi_Minh|c
+HAN|Noi Bai|Hanoi|VN|21.22|105.81|Asia/Ho_Chi_Minh|c
+HKG|Hong Kong International|Hong Kong|HK|22.31|113.92|Asia/Hong_Kong|m
+TPE|Taoyuan|Taipei|TW|25.08|121.23|Asia/Taipei|m
+PEK|Capital|Beijing|CN|40.08|116.58|Asia/Shanghai|c
+PVG|Pudong|Shanghai|CN|31.14|121.81|Asia/Shanghai|c
+CAN|Baiyun|Guangzhou|CN|23.39|113.30|Asia/Shanghai|c
+CTU|Tianfu|Chengdu|CN|30.31|104.44|Asia/Shanghai|m
+ICN|Incheon|Seoul|KR|37.46|126.44|Asia/Seoul|m
+PUS|Gimhae|Busan|KR|35.18|128.94|Asia/Seoul|s
+HND|Haneda|Tokyo|JP|35.55|139.78|Asia/Tokyo|c
+NRT|Narita|Tokyo|JP|35.77|140.39|Asia/Tokyo|f
+KIX|Kansai|Osaka|JP|34.43|135.23|Asia/Tokyo|s
+CTS|New Chitose|Sapporo|JP|42.78|141.69|Asia/Tokyo|m
+ALA|Almaty International|Almaty|KZ|43.35|77.04|Asia/Almaty|m
+TAS|Islam Karimov|Tashkent|UZ|41.26|69.28|Asia/Tashkent|m
+SYD|Kingsford Smith|Sydney|AU|-33.94|151.18|Australia/Sydney|s
+MEL|Tullamarine|Melbourne|AU|-37.67|144.84|Australia/Melbourne|c
+BNE|Brisbane|Brisbane|AU|-27.38|153.12|Australia/Brisbane|s
+PER|Perth|Perth|AU|-31.94|115.97|Australia/Perth|d
+ADL|Adelaide|Adelaide|AU|-34.95|138.53|Australia/Adelaide|s
+AKL|Auckland|Auckland|NZ|-37.01|174.79|Pacific/Auckland|s
+ZQN|Queenstown|Queenstown|NZ|-45.02|168.74|Pacific/Auckland|m
+NAN|Nadi|Nadi|FJ|-17.76|177.44|Pacific/Fiji|s
+HNL|Daniel K. Inouye|Honolulu|US|21.32|-157.92|Pacific/Honolulu|s
+JFK|John F. Kennedy|New York|US|40.64|-73.78|America/New_York|c
+EWR|Newark Liberty|Newark|US|40.69|-74.17|America/New_York|c
+BOS|Logan|Boston|US|42.36|-71.01|America/New_York|s
+IAD|Dulles|Washington|US|38.95|-77.46|America/New_York|f
+ATL|Hartsfield-Jackson|Atlanta|US|33.64|-84.43|America/New_York|f
+MIA|Miami International|Miami|US|25.79|-80.29|America/New_York|s
+MCO|Orlando International|Orlando|US|28.43|-81.31|America/New_York|f
+ORD|O'Hare|Chicago|US|41.98|-87.90|America/Chicago|c
+DFW|Dallas Fort Worth|Dallas|US|32.90|-97.04|America/Chicago|d
+IAH|George Bush|Houston|US|29.99|-95.34|America/Chicago|c
+MSP|Minneapolis-Saint Paul|Minneapolis|US|44.88|-93.22|America/Chicago|f
+DEN|Denver International|Denver|US|39.86|-104.67|America/Denver|m
+PHX|Sky Harbor|Phoenix|US|33.43|-112.01|America/Phoenix|d
+LAS|Harry Reid|Las Vegas|US|36.08|-115.15|America/Los_Angeles|d
+LAX|Los Angeles International|Los Angeles|US|33.94|-118.41|America/Los_Angeles|s
+SFO|San Francisco International|San Francisco|US|37.62|-122.38|America/Los_Angeles|s
+SEA|Seattle-Tacoma|Seattle|US|47.45|-122.31|America/Los_Angeles|m
+ANC|Ted Stevens|Anchorage|US|61.17|-149.99|America/Anchorage|m
+YYZ|Pearson|Toronto|CA|43.68|-79.63|America/Toronto|c
+YUL|Trudeau|Montréal|CA|45.47|-73.74|America/Toronto|c
+YVR|Vancouver International|Vancouver|CA|49.19|-123.18|America/Vancouver|m
+YYC|Calgary International|Calgary|CA|51.13|-114.01|America/Edmonton|m
+MEX|Benito Juárez|Mexico City|MX|19.44|-99.07|America/Mexico_City|m
+CUN|Cancún International|Cancún|MX|21.04|-86.88|America/Cancun|s
+HAV|José Martí|Havana|CU|22.99|-82.41|America/Havana|s
+PTY|Tocumen|Panama City|PA|9.07|-79.38|America/Panama|s
+SJO|Juan Santamaría|San José|CR|9.99|-84.20|America/Costa_Rica|f
+SJU|Luis Muñoz Marín|San Juan|PR|18.44|-66.00|America/Puerto_Rico|s
+BOG|El Dorado|Bogotá|CO|4.70|-74.15|America/Bogota|m
+UIO|Mariscal Sucre|Quito|EC|-0.13|-78.36|America/Guayaquil|m
+LIM|Jorge Chávez|Lima|PE|-12.02|-77.11|America/Lima|s
+GRU|Guarulhos|São Paulo|BR|-23.43|-46.47|America/Sao_Paulo|c
+GIG|Galeão|Rio de Janeiro|BR|-22.81|-43.25|America/Sao_Paulo|s
+BSB|Brasília International|Brasília|BR|-15.87|-47.92|America/Sao_Paulo|c
+EZE|Ezeiza|Buenos Aires|AR|-34.82|-58.54|America/Argentina/Buenos_Aires|c
+SCL|Arturo Merino Benítez|Santiago|CL|-33.39|-70.79|America/Santiago|m`.split("\n").map((l) => {
+  const [iata, name, city, cc, lat, lon, tz, scene] = l.split("|");
+  return { iata, name, city, cc, lat: +lat, lon: +lon, tz, scene };
+});
+const BY_IATA = Object.fromEntries(AIRPORTS.map((a) => [a.iata, a]));
+const TZ_ALIAS = { "Asia/Calcutta": "Asia/Kolkata", "Asia/Saigon": "Asia/Ho_Chi_Minh", "Asia/Katmandu": "Asia/Kathmandu",
+  "Europe/Kiev": "Europe/Kyiv", "America/Buenos_Aires": "America/Argentina/Buenos_Aires", "America/Montreal": "America/Toronto",
+  "Asia/Rangoon": "Asia/Bangkok", "Pacific/Truk": "Pacific/Fiji", "Asia/Ujung_Pandang": "Asia/Makassar" };
+const GREET = { GB: "Welcome", US: "Welcome", IE: "Fáilte", FR: "Bienvenue", BE: "Bienvenue", NL: "Welkom", DE: "Willkommen",
+  AT: "Willkommen", CH: "Grüezi", DK: "Velkommen", NO: "Velkommen", SE: "Välkommen", FI: "Tervetuloa", IS: "Velkomin",
+  ES: "Bienvenidos", PT: "Bem-vindos", IT: "Benvenuti", GR: "Καλώς ήρθατε", TR: "Hoş geldiniz", PL: "Witamy", CZ: "Vítejte",
+  HU: "Üdvözöljük", RO: "Bun venit", UA: "Ласкаво просимо", RU: "Добро пожаловать", AE: "أهلاً وسهلاً", QA: "أهلاً وسهلاً",
+  SA: "أهلاً وسهلاً", JO: "أهلاً وسهلاً", EG: "أهلاً وسهلاً", MA: "Marhaba", IL: "ברוכים הבאים", ET: "Enkwan dehna metachihu",
+  KE: "Karibu", TZ: "Karibu", NG: "Ẹ káàbọ̀", GH: "Akwaaba", ZA: "Welkom", MU: "Bienvenue", IN: "स्वागत है", LK: "Āyubōvan",
+  BD: "স্বাগতম", PK: "خوش آمدید", NP: "स्वागतम्", MV: "Marhaba", TH: "ยินดีต้อนรับ", SG: "Welcome", MY: "Selamat datang",
+  ID: "Selamat datang", PH: "Mabuhay", VN: "Chào mừng", HK: "歡迎", TW: "歡迎", CN: "欢迎", KR: "환영합니다", JP: "ようこそ",
+  KZ: "Qosh keldińiz", UZ: "Xush kelibsiz", AU: "G'day, welcome", NZ: "Kia ora", FJ: "Bula", CA: "Welcome · Bienvenue",
+  MX: "Bienvenidos", CU: "Bienvenidos", PA: "Bienvenidos", CR: "Pura vida", PR: "Bienvenidos", CO: "Bienvenidos",
+  EC: "Bienvenidos", PE: "Bienvenidos", BR: "Bem-vindos", AR: "Bienvenidos", CL: "Bienvenidos" };
+
+function distKm(a, b) {
+  const R = 6371, r = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function nearest(lat, lon) {
+  let best = AIRPORTS[0], bd = Infinity;
+  for (const a of AIRPORTS) { const d = distKm({ lat, lon }, a); if (d < bd) { bd = d; best = a; } }
+  return best;
+}
+function offsetMinutes(tz) {
+  try {
+    const d = new Date();
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour12: false, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).formatToParts(d);
+    const g = (t) => +parts.find((p) => p.type === t).value;
+    const asUTC = Date.UTC(g("year"), g("month") - 1, g("day"), g("hour") % 24, g("minute"));
+    return Math.round((asUTC - d.getTime()) / 60000);
+  } catch { return 0; }
+}
+function guessFromTimezone() {
+  let tz = "";
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { /* old browser */ }
+  tz = TZ_ALIAS[tz] || tz;
+  const same = AIRPORTS.filter((a) => a.tz === tz);
+  if (same.length) return same[0];
+  const mine = -new Date().getTimezoneOffset();
+  const region = tz.split("/")[0];
+  const off = AIRPORTS.filter((a) => offsetMinutes(a.tz) === mine);
+  return off.find((a) => a.tz.startsWith(region)) || off[0] || BY_IATA.LHR;
+}
+function localHour(a) {
+  try {
+    const p = new Intl.DateTimeFormat("en-GB", { timeZone: a.tz, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date());
+    return (+p.find((x) => x.type === "hour").value % 24) + (+p.find((x) => x.type === "minute").value) / 60;
+  } catch { const d = new Date(); return d.getHours() + d.getMinutes() / 60; }
+}
+function localTime(a) {
+  try { return new Intl.DateTimeFormat("en-GB", { timeZone: a.tz, hour: "2-digit", minute: "2-digit" }).format(new Date()); }
+  catch { return new Date().toTimeString().slice(0, 5); }
+}
+const plain = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+
+// ======================================================================= state
+const S = Object.assign({ name: "", home: "", at: "", tasks: [], stamps: [], minutes: 0, flights: 0, km: 0, streak: 0,
+  lastFlight: "", secrets: [], mood: "", music: 0.7, amb: 0.5, look: null, flight: null, coffee: false }, store.load());
+if (!S.look) {
+  const r = Math.random;
+  S.look = { skin: pick(r, ["#f1c7a5", "#d9a37c", "#a8714e", "#7a4a2e", "#f6d8bf"]), hair: pick(r, ["#2b1d14", "#5b3a1e", "#c9a05a", "#111", "#8a3b1f"]),
+    shirt: pick(r, ["#ffb547", "#5aa9ff", "#ef6f6c", "#6ee7a8", "#c792ea", "#f4f1ea"]), pants: pick(r, ["#2b3247", "#3d3d3d", "#4a5a7a"]) };
+}
+let airport = BY_IATA[S.at] || null;
+let weather = { code: 0, temp: null };
+
+// ======================================================================= audio
+const A = { ctx: null };
+function audioInit() {
+  if (A.ctx) { if (A.ctx.state === "suspended") A.ctx.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  const c = A.ctx = new AC();
+  A.master = c.createGain(); A.master.gain.value = 0.9;
+  const comp = c.createDynamicsCompressor();
+  A.master.connect(comp); comp.connect(c.destination);
+  A.music = c.createGain(); A.music.gain.value = S.music * 0.8; A.music.connect(A.master);
+  A.amb = c.createGain(); A.amb.gain.value = S.amb; A.amb.connect(A.master);
+  A.sfx = c.createGain(); A.sfx.gain.value = 0.9; A.sfx.connect(A.master);
+  // reverb from a generated impulse response
+  const len = c.sampleRate * 3.2, ir = c.createBuffer(2, len, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6); }
+  A.verb = c.createConvolver(); A.verb.buffer = ir;
+  const vg = c.createGain(); vg.gain.value = 0.55; A.verb.connect(vg); vg.connect(A.master);
+  // ambience: terminal hum (brown noise) and rain (filtered white noise)
+  const nb = c.createBuffer(1, c.sampleRate * 4, c.sampleRate), nd = nb.getChannelData(0);
+  let last = 0; for (let i = 0; i < nd.length; i++) { const w = Math.random() * 2 - 1; last = (last + 0.02 * w) / 1.02; nd[i] = last * 3.5; }
+  const hum = c.createBufferSource(); hum.buffer = nb; hum.loop = true;
+  const hf = c.createBiquadFilter(); hf.type = "lowpass"; hf.frequency.value = 380;
+  const hg = c.createGain(); hg.gain.value = 0.25; hum.connect(hf); hf.connect(hg); hg.connect(A.amb); hum.start();
+  const wb = c.createBuffer(1, c.sampleRate * 3, c.sampleRate), wd = wb.getChannelData(0);
+  for (let i = 0; i < wd.length; i++) wd[i] = Math.random() * 2 - 1;
+  const rain = c.createBufferSource(); rain.buffer = wb; rain.loop = true;
+  const rf = c.createBiquadFilter(); rf.type = "bandpass"; rf.frequency.value = 1800; rf.Q.value = 0.4;
+  A.rainGain = c.createGain(); A.rainGain.gain.value = 0; rain.connect(rf); rf.connect(A.rainGain); A.rainGain.connect(A.amb); rain.start();
+  music.start();
+  applyWeatherSound();
+}
+const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+function voice(freq, t, dur, { type = "sine", gain = 0.1, attack = 0.01, release = 1, dest = A.music, verb = 0.3, pan = 0, cutoff = 0 } = {}) {
+  const c = A.ctx, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.value = freq;
+  let node = o;
+  if (cutoff) { const f = c.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = cutoff; o.connect(f); node = f; }
+  node.connect(g);
+  let out = g;
+  if (pan && c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = pan; g.connect(p); out = p; }
+  out.connect(dest);
+  if (verb) { const s = c.createGain(); s.gain.value = verb; out.connect(s); s.connect(A.verb); }
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(gain, t + attack);
+  g.gain.setValueAtTime(gain, t + Math.max(attack, dur));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(attack, dur) + release);
+  o.start(t); o.stop(t + Math.max(attack, dur) + release + 0.05);
+}
+function pluck(freq, t, gain = 0.08, pan = 0, dest) {
+  const c = A.ctx, o = c.createOscillator(), o2 = c.createOscillator(), g = c.createGain();
+  o.type = "sine"; o.frequency.value = freq; o2.type = "triangle"; o2.frequency.value = freq * 2.001;
+  const g2 = c.createGain(); g2.gain.value = 0.18;
+  o.connect(g); o2.connect(g2); g2.connect(g);
+  let out = g;
+  if (c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = pan; g.connect(p); out = p; }
+  out.connect(dest || A.music);
+  const s = c.createGain(); s.gain.value = 0.6; out.connect(s); s.connect(A.verb);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+  o.start(t); o2.start(t); o.stop(t + 1.7); o2.stop(t + 1.7);
+}
+function pianoNote(midi, vel = 1) {
+  audioInit();
+  if (!A.ctx) return;
+  const c = A.ctx, t = c.currentTime + 0.005, f = mtof(midi), dec = clamp(3.2 - (midi - 48) * 0.05, 0.9, 3.2);
+  const g = c.createGain(), lp = c.createBiquadFilter();
+  lp.type = "lowpass"; lp.frequency.setValueAtTime(5200, t); lp.frequency.exponentialRampToValueAtTime(900, t + dec);
+  [[1, "sine", 0.55], [2, "triangle", 0.14], [3, "sine", 0.06], [4.01, "sine", 0.025]].forEach(([m, type, a]) => {
+    const o = c.createOscillator(), og = c.createGain(); o.type = type; o.frequency.value = f * m; og.gain.value = a;
+    o.connect(og); og.connect(lp); o.start(t); o.stop(t + dec + 0.1);
+  });
+  lp.connect(g); g.connect(A.sfx);
+  const s = c.createGain(); s.gain.value = 0.35; g.connect(s); s.connect(A.verb);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.32 * vel, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+}
+function chime(notes = [72, 76, 79]) {
+  audioInit();
+  if (!A.ctx) return;
+  const t = A.ctx.currentTime + 0.05;
+  notes.forEach((m, i) => { voice(mtof(m), t + i * 0.42, 0.02, { gain: 0.09, release: 2.2, dest: A.sfx, verb: 0.5 }); voice(mtof(m) * 2.76, t + i * 0.42, 0.01, { gain: 0.015, release: 1.2, dest: A.sfx, verb: 0.3 }); });
+}
+
+// original generative music: soft pads, a slow bass and a wandering kalimba
+const MOODS = {
+  lounge: { name: "AYR FM 104.7 · Lounge", bpm: 72, chords: [[48, 52, 55, 59, 62], [45, 48, 52, 55, 59], [41, 45, 48, 52, 55], [43, 47, 50, 52, 57]], scale: [0, 2, 4, 7, 9], root: 60, density: 0.32 },
+  night: { name: "AYR FM 88.1 · Night Shift", bpm: 60, chords: [[45, 48, 52, 55, 59], [41, 45, 48, 52, 55], [38, 41, 45, 48, 52], [40, 43, 47, 50, 55]], scale: [0, 3, 5, 7, 10], root: 57, density: 0.2 },
+  sunrise: { name: "AYR FM 96.3 · First Light", bpm: 76, chords: [[50, 54, 57, 61, 64], [47, 50, 54, 57, 61], [43, 47, 50, 54, 57], [45, 49, 52, 54, 59]], scale: [0, 2, 4, 7, 9], root: 62, density: 0.36 },
+  rain: { name: "AYR FM 101.9 · Rainy Gate", bpm: 64, chords: [[41, 45, 48, 52, 55], [43, 46, 50, 53, 57], [45, 48, 52, 55, 60], [40, 43, 47, 50, 55]], scale: [0, 2, 3, 7, 9], root: 53, density: 0.25 },
+};
+const music = {
+  step: 0, next: 0, timer: null, last: 0,
+  mood() { return MOODS[S.mood] || MOODS[autoMood()]; },
+  start() { if (this.timer) return; this.next = A.ctx.currentTime + 0.2; this.timer = setInterval(() => this.tick(), 60); },
+  tick() {
+    const c = A.ctx, m = this.mood(), eighth = 30 / m.bpm;
+    while (this.next < c.currentTime + 0.25) {
+      const t = this.next, s = this.step, chord = m.chords[Math.floor(s / 16) % m.chords.length];
+      if (s % 16 === 0) {
+        const len = 16 * eighth;
+        chord.slice(1).forEach((n, i) => voice(mtof(n + 12), t, len * 0.85, { type: "triangle", gain: 0.022, attack: 2.2, release: 3, cutoff: 900, verb: 0.5, pan: (i - 1.5) * 0.3 }));
+        voice(mtof(chord[0] - 12), t, len * 0.7, { type: "sine", gain: 0.07, attack: 0.08, release: 2.5, verb: 0.1 });
+      }
+      if (s % 8 === 4 && Math.random() < 0.3) voice(mtof(chord[0]), t, eighth, { type: "sine", gain: 0.035, attack: 0.05, release: 1.5, verb: 0.2 });
+      if (Math.random() < m.density * (s % 2 ? 0.6 : 1)) {
+        const deg = clamp(this.last + Math.round((Math.random() - 0.5) * 3), -3, 8);
+        this.last = deg;
+        const oct = Math.floor(deg / m.scale.length), idx = ((deg % m.scale.length) + m.scale.length) % m.scale.length;
+        pluck(mtof(m.root + oct * 12 + m.scale[idx]), t, 0.05 + Math.random() * 0.03, (Math.random() - 0.5) * 0.8);
+      }
+      if (s % 64 === 60 && Math.random() < 0.5) voice(mtof(m.root + 24 + pick(Math.random, m.scale)), t, 0.01, { gain: 0.02, release: 3, verb: 0.9 });
+      this.step++; this.next += eighth;
+    }
+  },
+};
+function autoMood() {
+  if (weather.code >= 51 && weather.code < 70 || weather.code >= 80 && weather.code < 83) return "rain";
+  const h = airport ? localHour(airport) : 12;
+  return h < 5 || h >= 21 ? "night" : h < 9 ? "sunrise" : "lounge";
+}
+function applyWeatherSound() {
+  if (!A.ctx) return;
+  const raining = weather.code >= 51 && weather.code < 70 || weather.code >= 80 && weather.code < 83 || weather.code >= 95;
+  A.rainGain.gain.setTargetAtTime(raining ? 0.08 : 0, A.ctx.currentTime, 2);
+}
+function setVolumes() {
+  if (!A.ctx) return;
+  A.music.gain.setTargetAtTime(S.music * 0.8, A.ctx.currentTime, 0.2);
+  A.amb.gain.setTargetAtTime(S.amb, A.ctx.currentTime, 0.2);
+}
+let muted = false;
+function toggleMute() {
+  audioInit();
+  muted = !muted;
+  if (A.ctx) A.master.gain.setTargetAtTime(muted ? 0 : 0.9, A.ctx.currentTime, 0.1);
+  toast(muted ? "Sound off" : "Sound on");
+}
+
+// ======================================================================= pixel font
+const FONT = { A: "25755", B: "65656", C: "34443", D: "65556", E: "74647", F: "74644", G: "34553", H: "55755", I: "72227", J: "11152",
+  K: "55655", L: "44447", M: "57755", N: "65555", O: "25552", P: "65644", Q: "25563", R: "65655", S: "34216", T: "72222", U: "55557",
+  V: "55552", W: "55775", X: "55255", Y: "55222", Z: "71247", 0: "75557", 1: "26227", 2: "71747", 3: "71317", 4: "55711", 5: "74717",
+  6: "74757", 7: "71222", 8: "75757", 9: "75717", ":": "02020", "-": "00700", ".": "00002", "/": "11244", ">": "42124", "!": "22202", "'": "22000", " ": "00000" };
+function text(str, x, y, color, s = 1) {
+  ctx.fillStyle = color;
+  let cx = Math.round(x);
+  for (const ch of plain(str)) {
+    const g = FONT[ch] || FONT[" "];
+    for (let r = 0; r < 5; r++) { const bits = +g[r]; for (let c = 0; c < 3; c++) if (bits & (4 >> c)) ctx.fillRect(cx + c * s, Math.round(y) + r * s, s, s); }
+    cx += 4 * s;
+  }
+}
+const textW = (str, s = 1) => plain(str).length * 4 * s - s;
+const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+
+// ======================================================================= scene
+let scene = null, cam = 0, light = 1, hour = 12;
+const player = { x: 120, tx: null, dir: 1, frame: 0, walk: 0, after: null };
+let npcs = [], planes = [], parts = [], paperPlanes = [];
+const SECRETS = { piano: "🎹 Played the lounge piano", chord: "🎼 Found the tower chord", cat: "🐈 Petted the airport cat",
+  vending: "🥤 Got a fortune", suitcase: "🧳 Returned a lost suitcase", coffee: "☕ Brewed a coffee", plane: "🛩 Threw a paper plane", radio: "📻 Tuned the radio" };
+
+function buildScene() {
+  const r = rng(hashStr(airport.iata + today()));
+  const sky = rng(hashStr(airport.iata));
+  const sc = { objects: [], buildings: [], hills: [], trees: [], stars: [], clouds: [] };
+  for (let i = 0; i < 70; i++) sc.stars.push([sky() * (W + WORLD * 0.15), sky() * 70, sky()]);
+  for (let i = 0; i < 9; i++) sc.clouds.push({ x: sky() * (W + WORLD * 0.2), y: 10 + sky() * 40, w: 18 + sky() * 30, s: 0.5 + sky() });
+  let x = 0;
+  const span = W + WORLD * 0.3;
+  const cityish = airport.scene === "c" ? 1 : airport.scene === "s" || airport.scene === "m" ? 0.5 : 0.25;
+  while (x < span) { const w = 6 + sky() * 14; if (sky() < cityish) sc.buildings.push({ x, w, h: 6 + sky() * (airport.scene === "c" ? 26 : 14), lit: sky() }); x += w + sky() * 6; }
+  for (let i = 0; i < 9; i++) sc.hills.push({ x: sky() * span, w: 50 + sky() * 90, h: 14 + sky() * 30 });
+  for (let i = 0; i < span; i += 3 + sky() * 4) sc.trees.push({ x: i, h: 4 + sky() * 7 });
+  // fixed furniture
+  sc.objects.push(obj("board", 26, 100, "Departures board — your tasks", () => openBoard()));
+  sc.objects.push(obj("gate", 300, 56, "Board a focus flight", () => openGate()));
+  sc.objects.push(obj("bench", 186, 34, null));
+  sc.objects.push(obj("plant", 230, 10, null));
+  sc.objects.push(obj("bench", 760, 34, null));
+  sc.objects.push(obj("plant", 1000, 10, null));
+  sc.objects.push(obj("radio", 940, 16, "Tune the lounge radio", () => tuneRadio()));
+  // random easter eggs in random spots, different every day and airport
+  const slots = [430, 520, 610, 700, 830, 880].sort(() => r() - 0.5);
+  const eggs = [];
+  if (r() < 0.8) eggs.push(["piano", "Play the piano", () => openPiano()]);
+  if (r() < 0.6) eggs.push(["coffee", "Brew a coffee", () => brewCoffee()]);
+  if (r() < 0.55) eggs.push(["vending", "Vending machine", () => vend()]);
+  if (r() < 0.5) eggs.push(["suitcase", "A lost suitcase…", () => suitcase()]);
+  if (r() < 0.5) eggs.push(["paper", "Fold a paper plane", () => throwPlane()]);
+  if (eggs.length < 2) eggs.push(["piano", "Play the piano", () => openPiano()]);
+  eggs.forEach(([k, label, act], i) => sc.objects.push(obj(k, slots[i], k === "piano" ? 44 : k === "coffee" ? 34 : 18, label, act)));
+  if (r() < 0.6) { const cat = obj("cat", 770, 12, "A sleepy cat", () => petCat()); cat.name = pick(r, ["Mochi", "Captain Whiskers", "Biscuit", "Pixel", "Jet", "Noodle", "Kaya"]); sc.objects.push(cat); }
+  sc.pillars = [150, 410, 660, 900];
+  scene = sc;
+  npcs = [];
+  for (let i = 0; i < 4; i++) npcs.push(newNpc(Math.random() * WORLD));
+}
+function obj(kind, x, w, label, act) { return { kind, x, w, label, act, t: 0 }; }
+function newNpc(x) {
+  const r = Math.random;
+  return { x: x ?? (r() < 0.5 ? -20 : WORLD + 20), y: 150 + r() * 22, v: (8 + r() * 14) * (r() < 0.5 ? -1 : 1), bag: r() < 0.7,
+    look: { skin: pick(r, ["#f1c7a5", "#d9a37c", "#a8714e", "#7a4a2e"]), hair: pick(r, ["#2b1d14", "#c9a05a", "#111", "#777"]), shirt: pick(r, ["#7c8aa5", "#b56576", "#6d9886", "#e0a458", "#5a6e9c"]), pants: pick(r, ["#2b3247", "#3d3d3d"]) }, frame: 0 };
+}
+
+// ---------------------------------------------------------------- drawing
+const SKY = [[0, "#070b1d", "#1a2347"], [5, "#141c3d", "#3c4572"], [6.5, "#4a6fa5", "#f5b27a"], [8, "#5c9de0", "#bfe0f7"], [16, "#4f93dc", "#cfe8fa"], [18.5, "#3b4a86", "#f39a6b"], [20, "#1a2150", "#5a4a7a"], [24, "#070b1d", "#1a2347"]];
+function skyColors(h) {
+  for (let i = 0; i < SKY.length - 1; i++) {
+    const [h1, t1, b1] = SKY[i], [h2, t2, b2] = SKY[i + 1];
+    if (h >= h1 && h <= h2) { const t = (h - h1) / (h2 - h1); return [mix(t1, t2, t), mix(b1, b2, t)]; }
+  }
+  return [SKY[0][1], SKY[0][2]];
+}
+function dayLight(h) { return h < 5 ? 0 : h < 7.5 ? (h - 5) / 2.5 : h < 18 ? 1 : h < 20.5 ? 1 - (h - 18) / 2.5 : 0; }
+
+function drawSky(px) {
+  const [top, bot] = skyColors(hour);
+  const g = ctx.createLinearGradient(0, 0, 0, 96); g.addColorStop(0, top); g.addColorStop(1, bot);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, 100);
+  const night = 1 - light;
+  if (night > 0.05) for (const [sx, sy, tw] of scene.stars) {
+    const x = ((sx - px * 0.15) % (W + 40) + W + 40) % (W + 40) - 20;
+    ctx.globalAlpha = night * (0.5 + 0.5 * Math.sin(now / 900 + tw * 20)); R(x, sy, 1, 1, "#fff");
+  }
+  ctx.globalAlpha = 1;
+  const t = hour >= 6 && hour <= 19 ? (hour - 6) / 13 : ((hour + 24 - 19) % 24) / 11;
+  const bx = 30 + t * (W - 60), by = 70 - Math.sin(t * Math.PI) * 55;
+  if (hour >= 6 && hour <= 19) { ctx.globalAlpha = 0.25; ctx.fillStyle = "#fff3c4"; ctx.beginPath(); ctx.arc(bx, by, 10, 0, 7); ctx.fill(); ctx.globalAlpha = 1; R(bx - 4, by - 4, 8, 8, "#fff1b8"); R(bx - 5, by - 2, 10, 4, "#fff1b8"); }
+  else { ctx.globalAlpha = 0.18; ctx.fillStyle = "#dfe6ff"; ctx.beginPath(); ctx.arc(bx, by, 8, 0, 7); ctx.fill(); ctx.globalAlpha = 1; R(bx - 3, by - 2, 6, 4, "#e9edf5"); R(bx - 2, by - 3, 4, 6, "#e9edf5"); R(bx, by - 1, 1, 1, "#c9d0de"); }
+  const cloudy = weather.code >= 2 ? (weather.code >= 45 ? 1 : 0.7) : 0.35;
+  scene.clouds.forEach((c, i) => {
+    if (i / scene.clouds.length > cloudy) return;
+    const x = ((c.x - px * 0.2 + now / 1000 * c.s * 1.5) % (W + 80) + W + 80) % (W + 80) - 40;
+    const col = weather.code >= 61 ? mix("#2a3150", "#9aa3b5", 0.2 + light * 0.6) : mix("#2a3150", "#ffffff", light);
+    ctx.globalAlpha = 0.75; R(x, c.y, c.w, 4, col); R(x + 4, c.y - 3, c.w * 0.5, 3, col); R(x + c.w * 0.4, c.y - 5, c.w * 0.35, 5, col); ctx.globalAlpha = 1;
+  });
+}
+function drawHorizon(px) {
+  const off = px * 0.3, base = 92;
+  const far = mix("#121a33", "#8fa6c4", light), near = mix("#0c1226", "#5c6f8f", light);
+  if (airport.scene === "m") for (const h of scene.hills) {
+    const x = h.x - off; ctx.fillStyle = far; ctx.beginPath(); ctx.moveTo(x, base); ctx.lineTo(x + h.w / 2, base - h.h - 12); ctx.lineTo(x + h.w, base); ctx.fill();
+    ctx.fillStyle = mix("#6b7590", "#ffffff", light); ctx.beginPath(); ctx.moveTo(x + h.w / 2, base - h.h - 12); ctx.lineTo(x + h.w / 2 - 7, base - h.h - 4); ctx.lineTo(x + h.w / 2 + 7, base - h.h - 4); ctx.fill();
+  }
+  if (airport.scene === "d") for (const h of scene.hills) { const x = h.x - off; ctx.fillStyle = mix("#3a2f2a", "#e2b77a", light); ctx.beginPath(); ctx.ellipse(x + h.w / 2, base, h.w / 2, h.h * 0.45, 0, Math.PI, 0); ctx.fill(); }
+  if (airport.scene === "s") { R(0, base - 10, W, 10, mix("#0d1a33", "#4f8fc9", light)); for (let i = 0; i < 12; i++) R(((i * 47 - off * 0.5 + now / 120) % W + W) % W, base - 8 + (i % 4) * 2, 6, 1, mix("#24365e", "#bde3ff", light)); }
+  for (const b of scene.buildings) {
+    const x = b.x - off; if (x < -20 || x > W + 20) continue;
+    R(x, base - b.h, b.w, b.h, near);
+    if (light < 0.6) for (let wy = base - b.h + 2; wy < base - 2; wy += 3) for (let wx = x + 1; wx < x + b.w - 1; wx += 3) if (hashStr(`${b.x}${wx}${wy}`) % 7 === 0) R(wx, wy, 1, 1, "#ffd27a");
+  }
+  if (airport.scene === "f") for (const t of scene.trees) { const x = t.x - off; if (x > -5 && x < W + 5) { ctx.fillStyle = mix("#0b1a14", "#3c6b4f", light); ctx.beginPath(); ctx.moveTo(x - 3, base); ctx.lineTo(x, base - t.h); ctx.lineTo(x + 3, base); ctx.fill(); } }
+  // runway
+  R(0, base, W, 8, mix("#1b2030", "#6b7180", light));
+  R(0, base, W, 1, mix("#2a3044", "#8b919f", light));
+  for (let i = 0; i < W + 30; i += 22) R(((i - px * 0.5) % (W + 22) + W + 22) % (W + 22) - 11, base + 4, 10, 1, mix("#c9c9c9", "#f4f4f4", light));
+  if (light < 0.7) for (let i = 0; i < W + 20; i += 14) { const x = ((i - px * 0.5) % (W + 14) + W + 14) % (W + 14) - 7; R(x, base + 1, 1, 1, (Math.floor(now / 500 + i) % 3) ? "#ffcf6e" : "#ff8a5c"); R(x, base + 7, 1, 1, "#7fd0ff"); }
+}
+function drawPlaneSprite(x, y, color, s = 1, climb = 0) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-climb); ctx.scale(s, s);
+  R(-12, -2, 22, 4, "#e9edf3"); R(10, -1, 3, 3, "#e9edf3"); R(-12, -6, 4, 4, color); R(-2, 0, 8, 2, "#c9ced8"); R(-9, -1, 16, 1, "#9fb6d6");
+  ctx.restore();
+}
+function drawPlanes(px, dt) {
+  if (Math.random() < dt / 22 && planes.length < 2) planes.push({ x: -30, y: 94, v: 6, a: 9, climb: 0, kind: Math.random() < 0.6 ? "takeoff" : "taxi", color: pick(Math.random, ["#ffb547", "#5aa9ff", "#ef6f6c", "#6ee7a8", "#c792ea"]) });
+  for (const p of planes) {
+    if (p.kind === "takeoff") { p.v += p.a * dt; if (p.x > W * 0.45) { p.climb = Math.min(0.32, p.climb + dt * 0.12); p.y -= p.v * Math.sin(p.climb) * dt; } }
+    p.x += p.v * Math.cos(p.climb) * dt;
+    drawPlaneSprite(p.x, p.y, p.color, 0.6, p.climb);
+  }
+  planes = planes.filter((p) => p.x < W + 40 && p.y > -20);
+}
+function drawWeather() {
+  const c = weather.code;
+  if (c >= 45 && c <= 48) { ctx.globalAlpha = 0.35; R(0, 40, W, 60, "#cfd6e0"); ctx.globalAlpha = 1; }
+  const rain = c >= 51 && c < 70 || c >= 80 && c < 83 || c >= 95, snow = c >= 71 && c < 78 || c === 85 || c === 86;
+  if (rain || snow) {
+    ctx.fillStyle = snow ? "#ffffff" : "rgba(200,220,255,.55)";
+    for (let i = 0; i < 70; i++) {
+      const seed = i * 97.13, speed = snow ? 12 : 80;
+      const y = (seed * 3 + now / 1000 * speed) % 100, x = (seed * 7 + (snow ? Math.sin(now / 1000 + i) * 6 : y * 0.3)) % W;
+      if (snow) ctx.fillRect(x | 0, y | 0, 1, 1); else ctx.fillRect(x | 0, y | 0, 1, 3);
+    }
+  }
+  if (c >= 95 && Math.random() < 0.004) flash = 1;
+}
+let flash = 0;
+
+function drawInterior(px) {
+  const wall = mix("#232a3d", "#d8d2c4", light * 0.85 + 0.1), frame = mix("#0e121c", "#3d4452", light), floor = mix("#171c2a", "#bdb6a6", light * 0.8 + 0.1);
+  // ceiling beam and mullions
+  R(0, 0, W, 7, frame);
+  for (let wx = -((px) % 48); wx < W; wx += 48) R(wx, 0, 3, 100, frame);
+  R(0, 98, W, 4, frame);
+  // lamps
+  for (let lx = -((px) % 96) + 30; lx < W; lx += 96) { R(lx, 7, 1, 6, frame); R(lx - 4, 13, 9, 2, mix("#555555", "#dddddd", light)); if (light < 0.8) { ctx.globalAlpha = 0.18 * (1 - light); ctx.fillStyle = "#ffd28a"; ctx.beginPath(); ctx.moveTo(lx - 4, 15); ctx.lineTo(lx - 22, 112); ctx.lineTo(lx + 22, 112); ctx.lineTo(lx + 5, 15); ctx.fill(); ctx.globalAlpha = 1; } }
+  // wall below windows and the floor
+  R(0, 102, W, FLOOR - 102, wall);
+  R(0, FLOOR - 1, W, 1, mix("#0b0e16", "#a49d8e", light));
+  R(0, FLOOR, W, H - FLOOR, floor);
+  for (let y = FLOOR + 8, k = 0; y < H; y += 10 + k * 3, k++) R(0, y, W, 1, mix("#1d2333", "#b0a998", light));
+  ctx.globalAlpha = 0.07 + 0.08 * light;
+  for (let wx = -((px) % 48); wx < W; wx += 48) R(wx + 6, FLOOR + 2, 36, 20, "#ffffff");
+  ctx.globalAlpha = 1;
+  // pillars and clock
+  for (const p of scene.pillars) { const x = p - px; if (x < -12 || x > W + 12) continue; R(x, 7, 9, FLOOR - 7, mix("#1a1f2d", "#c8c1b2", light)); R(x + 8, 7, 1, FLOOR - 7, mix("#10141e", "#aaa394", light)); }
+  const cx = scene.pillars[1] - px; if (cx > -30 && cx < W + 30) { R(cx - 9, 40, 27, 11, "#0c0f17"); text(localTime(airport), cx - 6, 43, "#ff9d3c"); }
+  // welcome sign
+  const wsx = 470 - px, sign = "WELCOME TO " + airport.city, sw = textW(sign) + 12;
+  if (wsx > -sw && wsx < W) { R(wsx, 14, 1, 6, frame); R(wsx + sw - 1, 14, 1, 6, frame); R(wsx, 20, sw, 11, "#10141f"); text(sign, wsx + 6, 23, "#ffb547"); }
+}
+
+function person(x, y, look, frame, dir, bag) {
+  x = Math.round(x); y = Math.round(y);
+  const step = frame % 2;
+  R(x - 3, y - 2, 2, 2 + (step ? 0 : 0), look.pants); R(x + 1, y - 2, 2, 2, look.pants);
+  R(x - 3 + (step ? -1 : 0), y - 5, 2, 4, look.pants); R(x + 1 + (step ? 1 : 0), y - 5, 2, 4, look.pants);
+  R(x - 3, y - 11, 6, 6, look.shirt);
+  R(x - 2, y - 15, 4, 4, look.skin); R(x - 2, y - 16, 4, 2, look.hair); R(x + (dir > 0 ? 1 : -2), y - 14, 1, 1, "#222");
+  if (bag) { const bx = x + (dir > 0 ? -7 : 5); R(bx, y - 6, 3, 5, "#3b4254"); R(bx + 1, y - 9, 1, 3, "#888"); R(bx, y - 1, 1, 1, "#111"); }
+}
+function drawObject(o, px) {
+  const x = Math.round(o.x - px), k = o.kind;
+  if (x < -120 || x > W + 60) return;
+  const dark = light < 0.5;
+  if (k === "board") {
+    R(x + 10, 7, 1, 8, "#333"); R(x + 88, 7, 1, 8, "#333");
+    R(x, 15, 100, 52, "#0b0d14"); R(x + 2, 17, 96, 7, "#151a26"); text("DEPARTURES", x + 4, 18, "#ffb547");
+    const rows = S.tasks.filter((t) => !t.done).slice(0, 5);
+    const sample = rows.length ? rows.map((t) => [t.code, t.text, t.status || "ON TIME"]) : [["AY101", "NEW YORK", "BOARDING"], ["AY204", "LISBON", "ON TIME"], ["AY330", "TOKYO", "DELAYED"], ["AY018", "DUBAI", "ON TIME"]];
+    sample.forEach(([c, d, st], i) => { const y = 27 + i * 8; text(c, x + 4, y, "#e9e3d5"); text(d.slice(0, 9), x + 28, y, "#e9e3d5"); text(st.slice(0, 8), x + 66, y, st === "BOARDING" ? "#6ee7a8" : "#ffb547", 1); });
+  } else if (k === "gate") {
+    R(x - 4, 50, 1, 8, "#333"); R(x + 60, 50, 1, 8, "#333"); R(x - 4, 58, 65, 10, "#10141f"); text("GATE A7 FOCUS", x + 2, 61, "#ffb547");
+    R(x + 34, 72, 26, FLOOR - 72, mix("#2c3550", "#9db4cf", light * 0.7)); R(x + 46, 72, 2, FLOOR - 72, "#1b2133");
+    R(x, 132, 46, 4, mix("#3a4256", "#e8e1d0", light)); R(x + 2, 136, 42, 18, mix("#262c3c", "#8c8576", light)); R(x + 6, 124, 10, 8, "#0c0f17"); R(x + 7, 125, 8, 5, (Math.floor(now / 700) % 2) ? "#ffb547" : "#c78a2a");
+  } else if (k === "bench") {
+    R(x, 146, 34, 3, mix("#384055", "#7b8494", light)); R(x, 138, 34, 2, mix("#2b3245", "#6a7383", light)); R(x + 2, 149, 2, 6, "#222"); R(x + 30, 149, 2, 6, "#222");
+  } else if (k === "plant") {
+    R(x, 146, 9, 9, "#7a4f35"); const g = mix("#1d3b2c", "#5aa36e", light); R(x - 3, 134, 15, 12, g); R(x + 1, 128, 7, 8, g); R(x - 5, 140, 4, 4, g);
+  } else if (k === "radio") {
+    R(x - 2, 148, 20, 7, "#5b4636"); R(x, 140, 15, 8, "#2f3446"); R(x + 2, 142, 6, 4, "#ffb547"); R(x + 10, 142, 3, 3, "#111"); R(x + 13, 134, 1, 6, "#999");
+    if (Math.floor(now / 600) % 2) R(x + 13, 133, 1, 1, "#ff6b6b");
+  } else if (k === "piano") {
+    R(x, 130, 44, 10, "#0f0f12"); R(x + 4, 140, 2, 14, "#111"); R(x + 38, 140, 2, 14, "#111");
+    ctx.fillStyle = "#16161b"; ctx.beginPath(); ctx.moveTo(x + 6, 130); ctx.lineTo(x + 30, 112); ctx.lineTo(x + 32, 114); ctx.lineTo(x + 12, 130); ctx.fill();
+    for (let i = 0; i < 10; i++) R(x + 2 + i * 4, 136, 3, 4, "#f4f1ea");
+    R(x + 46, 142, 8, 3, "#3a2a20"); R(x + 47, 145, 1, 9, "#222"); R(x + 52, 145, 1, 9, "#222");
+    if (o.t > 0) { o.t -= 1 / 30; if (Math.random() < 0.2) parts.push({ x: o.x + 20, y: 124, vx: (Math.random() - 0.5) * 6, vy: -10, life: 2, kind: "note" }); }
+  } else if (k === "coffee") {
+    R(x, 128, 32, 26, mix("#4a2f24", "#8a5a3c", light)); for (let i = 0; i < 8; i++) R(x - 2 + i * 4.5, 120, 4, 6, i % 2 ? "#f4f1ea" : "#c0392b");
+    R(x + 4, 132, 10, 8, "#1b1b1b"); text("CAFE", x + 16, 134, "#ffd9a0");
+    if (Math.random() < 0.06) parts.push({ x: o.x + 9, y: 128, vx: (Math.random() - 0.5) * 2, vy: -6, life: 2.5, kind: "steam" });
+  } else if (k === "vending") {
+    R(x, 116, 18, 38, "#9b2c3a"); R(x + 2, 119, 10, 26, dark ? "#1d2f45" : "#2c4a6e"); for (let i = 0; i < 12; i++) R(x + 3 + (i % 3) * 3, 121 + Math.floor(i / 3) * 6, 2, 3, pick(rng(i + 3), ["#ffb547", "#6ee7a8", "#5aa9ff", "#fff"]));
+    R(x + 13, 124, 3, 6, "#222"); R(x + 2, 147, 10, 4, "#111");
+  } else if (k === "suitcase") {
+    R(x, 145, 9, 9, "#7d5a96"); R(x + 3, 142, 3, 3, "#444"); R(x + 1, 148, 7, 1, "#5d4372");
+  } else if (k === "paper") {
+    R(x, 148, 14, 7, mix("#3a3f52", "#a69f90", light)); R(x + 2, 145, 10, 3, "#f4f1ea"); R(x + 4, 143, 3, 2, "#f4f1ea");
+  } else if (k === "cat") {
+    const bx = x + 8; R(bx, 140, 8, 5, "#e0a458"); R(bx + 7, 138, 4, 4, "#e0a458"); R(bx + 7, 137, 1, 1, "#e0a458"); R(bx + 10, 137, 1, 1, "#e0a458"); R(bx - 2, 143, 3, 1, "#e0a458");
+    if (Math.floor(now / 1500) % 3 === 0 && Math.random() < 0.03) parts.push({ x: o.x + 18, y: 134, vx: 2, vy: -4, life: 2, kind: "z" });
+  }
+}
+function drawParts(px, dt) {
+  for (const p of parts) {
+    p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
+    const x = p.x - px, a = clamp(p.life, 0, 1);
+    ctx.globalAlpha = a;
+    if (p.kind === "steam") R(x, p.y, 1, 2, "#ddd");
+    else if (p.kind === "heart") { R(x, p.y, 2, 2, "#ff6b8a"); R(x + 3, p.y, 2, 2, "#ff6b8a"); R(x, p.y + 1, 5, 2, "#ff6b8a"); R(x + 1, p.y + 3, 3, 1, "#ff6b8a"); }
+    else if (p.kind === "note") { R(x, p.y, 1, 5, "#ffb547"); R(x - 2, p.y + 4, 3, 2, "#ffb547"); R(x + 1, p.y, 2, 1, "#ffb547"); }
+    else if (p.kind === "z") text("Z", x, p.y, "#cfd6e0");
+    else if (p.kind === "spark") R(x, p.y, 1, 1, "#ffd27a");
+    ctx.globalAlpha = 1;
+  }
+  parts = parts.filter((p) => p.life > 0);
+  for (const pp of paperPlanes) {
+    pp.t += dt; pp.x += 45 * dt * pp.dir; pp.y = pp.y0 - 30 * Math.sin(pp.t * 1.3) + pp.t * 6;
+    const x = pp.x - px; R(x, pp.y, 5, 1, "#f4f1ea"); R(x + (pp.dir > 0 ? 1 : 0), pp.y - 1, 3, 1, "#e0dccf"); R(x + 2, pp.y + 1, 2, 1, "#cfcabb");
+  }
+  paperPlanes = paperPlanes.filter((pp) => pp.t < 9 && pp.y < FLOOR + 50);
+}
+
+// ---------------------------------------------------------------- in-flight view
+function drawCabin(dt) {
+  const [top, bot] = skyColors(hour);
+  R(0, 0, W, H, "#d8d2c4"); R(0, 0, W, H, mix("#1b2030", "#d8d2c4", light * 0.7 + 0.15));
+  const cx = W / 2, cy = 84, rw = 46, rh = 62;
+  ctx.save(); ctx.beginPath(); ctx.ellipse(cx, cy, rw, rh, 0, 0, 7); ctx.clip();
+  const g = ctx.createLinearGradient(0, cy - rh, 0, cy + rh); g.addColorStop(0, top); g.addColorStop(1, bot);
+  ctx.fillStyle = g; ctx.fillRect(cx - rw, cy - rh, rw * 2, rh * 2);
+  if (light < 0.4) for (const [sx, sy] of scene.stars) R((sx * 0.5) % 100 + cx - 50, sy + cy - 60, 1, 1, "#fff");
+  for (let i = 0; i < 12; i++) {
+    const speed = 14 + (i % 4) * 9, y = cy - 40 + (i * 37) % 90, w = 16 + (i * 13) % 26;
+    const x = cx + rw - ((now / 1000 * speed + i * 53) % (rw * 2 + w + 20));
+    ctx.globalAlpha = 0.8; R(x, y, w, 4, mix("#2a3150", "#ffffff", light)); R(x + 4, y - 3, w * 0.6, 3, mix("#2a3150", "#ffffff", light)); ctx.globalAlpha = 1;
+  }
+  ctx.fillStyle = mix("#3a4256", "#c9ced8", light); ctx.beginPath(); ctx.moveTo(cx - rw, cy + 30); ctx.lineTo(cx + 20, cy + 18); ctx.lineTo(cx + 26, cy + 21); ctx.lineTo(cx - rw, cy + 44); ctx.fill();
+  if (Math.floor(now / 1200) % 2) R(cx + 22, cy + 18, 2, 2, "#ff4d4d");
+  ctx.restore();
+  ctx.strokeStyle = mix("#0e121c", "#9a9384", light); ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(cx, cy, rw + 2, rh + 2, 0, 0, 7); ctx.stroke();
+  ctx.strokeStyle = mix("#2a3044", "#efe9dc", light); ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(cx, cy, rw + 6, rh + 6, 0, 0, 7); ctx.stroke();
+  R(cx - 24, 6, 48, 9, "#10141f"); text(S.flight.seatbelt ? "FASTEN SEATBELT" : "SEATBELT OFF", cx - textW(S.flight.seatbelt ? "FASTEN SEATBELT" : "SEATBELT OFF") / 2, 8, S.flight.seatbelt ? "#ffb547" : "#6ee7a8");
+}
+
+// ======================================================================= HUD
+function updateBanner() {
+  if (!airport) return;
+  $("#greet").textContent = (GREET[airport.cc] || "Welcome") + (S.name ? `, ${S.name}` : "");
+  $("#where").textContent = `${airport.city} · ${airport.name} (${airport.iata})`;
+  const w = weather.temp == null ? "" : ` · ${Math.round(weather.temp)}°C ${weatherWord()}`;
+  $("#meta").textContent = `${localTime(airport)} local${w}${S.coffee ? " · ☕" : ""}${S.streak > 1 ? ` · 🔥 ${S.streak}-day streak` : ""}`;
+}
+function weatherWord() {
+  const c = weather.code;
+  return c === 0 ? "clear" : c < 3 ? "partly cloudy" : c === 3 ? "overcast" : c < 50 ? "fog" : c < 60 ? "drizzle" : c < 70 ? "rain" : c < 80 ? "snow" : c < 83 ? "showers" : c < 90 ? "snow showers" : "storm";
+}
+let toastTimer;
+function toast(msg, ms = 3200) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), ms);
+}
+function modal(html, onOpen) {
+  $("#card").innerHTML = html;
+  $("#modal").classList.add("open");
+  onOpen && onOpen();
+}
+function closeModal() { $("#modal").classList.remove("open"); pianoOpen = false; }
+$("#modal").addEventListener("click", (e) => { if (e.target.id === "modal" && !splashOpen) closeModal(); });
+
+// ======================================================================= panels
+let splashOpen = false;
+function openSplash() {
+  splashOpen = true;
+  const options = AIRPORTS.slice().sort((a, b) => a.city.localeCompare(b.city)).map((a) => `<option value="${a.iata}" ${a === airport ? "selected" : ""}>${a.city} — ${a.iata}</option>`).join("");
+  modal(`<h2>✈ Ayrport Lounge</h2>
+    <p class="muted">A quiet terminal to get things done. Walk around, board focus flights, collect stamps — and keep an eye out for surprises.</p>
+    <div class="pass"><div><span>PASSENGER</span><b id="pp-name">${S.name ? S.name.toUpperCase() : "YOU"}</b></div><div><span>FROM</span><b id="pp-from">${airport.iata}</b></div><div><span>GATE</span><b>A7</b></div>
+    <div><span>CLASS</span><b>FOCUS</b></div><div><span>SEAT</span><b>${1 + hashStr(S.name || "you") % 30}${"ACDF"[hashStr(S.name + "s") % 4]}</b></div><div><span>BOARDING</span><b>NOW</b></div></div>
+    <input class="field" id="sp-name" placeholder="Your name (optional)" maxlength="18" value="${S.name.replace(/"/g, "")}">
+    <div class="row"><select class="field" id="sp-airport" style="flex:1">${options}</select><button class="btn" id="sp-loc" title="Use your location to find the nearest airport">📍 Nearest to me</button></div>
+    <div class="row"><button class="btn go" id="sp-go">Enter the terminal →</button><span class="muted">Sound on for the music</span></div>`, () => {
+    $("#sp-name").addEventListener("input", (e) => { $("#pp-name").textContent = (e.target.value || "YOU").toUpperCase(); });
+    $("#sp-airport").addEventListener("change", (e) => { setAirport(BY_IATA[e.target.value]); $("#pp-from").textContent = airport.iata; });
+    $("#sp-loc").onclick = () => locate(true);
+    $("#sp-go").onclick = enter;
+    $("#sp-name").addEventListener("keydown", (e) => { if (e.key === "Enter") enter(); });
+  });
+}
+function enter() {
+  S.name = ($("#sp-name").value || "").trim().slice(0, 18);
+  if (!S.home) S.home = airport.iata;
+  store.save();
+  splashOpen = false;
+  closeModal();
+  audioInit();
+  chime();
+  updateBanner();
+  setTimeout(() => toast(`${GREET[airport.cc] || "Welcome"}! You're in ${airport.city}. Walk with ← → or click. Press E near things.`, 5200), 600);
+}
+function locate(manual) {
+  if (!navigator.geolocation) { if (manual) toast("Location isn't available in this browser."); return; }
+  navigator.geolocation.getCurrentPosition((pos) => {
+    const a = nearest(pos.coords.latitude, pos.coords.longitude);
+    setAirport(a);
+    const sel = $("#sp-airport"); if (sel) sel.value = a.iata;
+    const f = $("#pp-from"); if (f) f.textContent = a.iata;
+    if (manual) toast(`Nearest airport: ${a.name}, ${a.city}`);
+  }, () => { if (manual) toast("No problem — pick your airport from the list."); }, { timeout: 8000, maximumAge: 3600e3 });
+}
+function setAirport(a) {
+  airport = a; S.at = a.iata; store.save();
+  buildScene(); updateBanner(); fetchWeather();
+}
+
+function openBoard() {
+  const rows = S.tasks.map((t, i) => `<div><span>${t.code}</span><span>${esc(t.text)}</span><span>${t.gate}</span><span class="st ${t.done ? "done" : ""}" data-i="${i}">${t.done ? "DEPARTED ✓" : "ON TIME"}</span><button class="x" data-del="${i}" title="Remove">✕</button></div>`).join("");
+  modal(`<h2>🗒 Departures</h2><p class="muted">Each task is a flight. Tap its status when it has departed (done).</p>
+    <div class="board"><div><span>FLIGHT</span><span>DESTINATION</span><span>GATE</span><span>STATUS</span><span></span></div>${rows || '<div><span></span><span class="muted">No flights yet — add your first task</span></div>'}</div>
+    <div class="row"><input class="field" id="tk" placeholder="Add a task, e.g. Finish chapter 2" maxlength="60" style="flex:1"><button class="btn go" id="tk-add">Schedule</button></div>
+    <div class="row"><button class="btn" id="tk-clear">Clear departed</button><button class="btn" onclick="closeModal()">Close</button></div>`, () => {
+    const add = () => { const v = $("#tk").value.trim(); if (!v) return; S.tasks.push({ text: v, code: "AY" + (100 + Math.floor(Math.random() * 900)), gate: "ABC"[Math.floor(Math.random() * 3)] + (1 + Math.floor(Math.random() * 12)), done: false }); store.save(); openBoard(); };
+    $("#tk-add").onclick = add;
+    $("#tk").addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
+    $("#tk").focus();
+    document.querySelectorAll("[data-i]").forEach((el) => el.onclick = () => { const t = S.tasks[+el.dataset.i]; t.done = !t.done; if (t.done) chime([76, 79]); store.save(); openBoard(); });
+    document.querySelectorAll("[data-del]").forEach((el) => el.onclick = () => { S.tasks.splice(+el.dataset.del, 1); store.save(); openBoard(); });
+    $("#tk-clear").onclick = () => { S.tasks = S.tasks.filter((t) => !t.done); store.save(); openBoard(); };
+  });
+}
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+let gateMinutes = 25, gateTask = -1;
+function destinationFor(minutes) {
+  const target = minutes * 60;
+  const choices = AIRPORTS.filter((a) => a !== airport).map((a) => [a, Math.abs(distKm(airport, a) - target)]).sort((x, y) => x[1] - y[1]).slice(0, 5);
+  return choices[Math.floor(Math.random() * choices.length)][0];
+}
+let gateDest = null;
+function openGate() {
+  gateDest = gateDest && distKm(airport, gateDest) > 1 ? gateDest : destinationFor(gateMinutes);
+  const open = S.tasks.filter((t) => !t.done);
+  modal(`<h2>🛫 Gate A7 · Focus flights</h2><p class="muted">Pick how long you want to focus. You'll fly somewhere new — finish the flight to land there and earn a stamp.</p>
+    <h3>Flight time</h3><div class="row" id="g-mins">${[15, 25, 45, 60, 90].map((m) => `<button class="btn ${m === gateMinutes ? "sel" : ""}" data-m="${m}">${m} min</button>`).join("")}</div>
+    <h3>Working on</h3><select class="field" id="g-task"><option value="-1">Just focusing</option>${open.map((t) => `<option value="${S.tasks.indexOf(t)}" ${S.tasks.indexOf(t) === gateTask ? "selected" : ""}>${esc(t.text)}</option>`).join("")}</select>
+    <div class="pass"><div><span>FROM</span><b>${airport.iata}</b></div><div><span>TO</span><b>${gateDest.iata}</b></div><div><span>TIME</span><b>${gateMinutes}m</b></div>
+    <div style="grid-column: span 3"><span>DESTINATION</span><b>${gateDest.city}</b> <span style="display:inline">· ${Math.round(distKm(airport, gateDest)).toLocaleString()} km</span></div></div>
+    <div class="row"><button class="btn go" id="g-go">Board flight →</button><button class="btn" id="g-new">Another destination</button>${S.coffee ? '<span class="muted">☕ coffee on board: +10% miles</span>' : ""}</div>`, () => {
+    document.querySelectorAll("[data-m]").forEach((b) => b.onclick = () => { gateMinutes = +b.dataset.m; gateDest = destinationFor(gateMinutes); openGate(); });
+    $("#g-task").onchange = (e) => { gateTask = +e.target.value; };
+    $("#g-new").onclick = () => { gateDest = destinationFor(gateMinutes); openGate(); };
+    $("#g-go").onclick = () => startFlight(gateMinutes, gateDest, gateTask);
+  });
+}
+function startFlight(minutes, dest, task) {
+  closeModal();
+  const start = Date.now();
+  S.flight = { from: airport.iata, to: dest.iata, minutes, start, end: start + minutes * 60000, paused: 0, task, code: "AY" + (1000 + Math.floor(Math.random() * 9000)), seatbelt: true };
+  gateDest = null;
+  store.save();
+  chime([79, 76, 72]);
+  toast(`${S.flight.code} to ${dest.city}: doors closed. Time to focus.`);
+}
+function flightLeft() {
+  const f = S.flight;
+  return f ? Math.max(0, f.end - (f.paused || Date.now())) : 0;
+}
+function updateFlightBar() {
+  const f = S.flight, bar = $("#flightbar");
+  if (!f) { bar.style.display = "none"; document.title = "Ayrport Lounge"; return; }
+  bar.style.display = "block";
+  const left = flightLeft(), total = f.minutes * 60000, done = clamp(1 - left / total, 0, 1);
+  const mm = Math.floor(left / 60000), ss = Math.floor(left / 1000) % 60;
+  $("#fb-time").textContent = `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+  $("#fb-route").textContent = `${f.code} · ${f.from} → ${f.to} · ${BY_IATA[f.to].city}`;
+  $("#fb-label").textContent = f.paused ? "paused" : f.task >= 0 && S.tasks[f.task] ? S.tasks[f.task].text : "in flight";
+  $("#fb-fill").style.width = `${done * 100}%`; $("#fb-plane").style.left = `${done * 100}%`;
+  $("#fb-pause").textContent = f.paused ? "Resume" : "Pause";
+  document.title = `✈ ${$("#fb-time").textContent} · ${f.to}`;
+  if (f.seatbelt && Date.now() - f.start > 60000) { f.seatbelt = false; chime([84]); }
+  if (!f.paused && left <= 0) land();
+}
+$("#fb-pause").onclick = () => {
+  const f = S.flight; if (!f) return;
+  if (f.paused) { f.end += Date.now() - f.paused; f.paused = 0; } else f.paused = Date.now();
+  store.save();
+};
+$("#fb-divert").onclick = () => {
+  if (!confirm("Divert back to the terminal? This flight won't count.")) return;
+  S.flight = null; store.save(); toast("Diverted back to the gate. No stamp this time.");
+};
+function land() {
+  const f = S.flight, dest = BY_IATA[f.to], km = Math.round(distKm(BY_IATA[f.from], dest) * (S.coffee ? 1.1 : 1));
+  S.flight = null;
+  S.minutes += f.minutes; S.flights += 1; S.km += km; S.coffee = false;
+  S.stamps.push({ iata: dest.iata, date: today() });
+  const yest = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  S.streak = S.lastFlight === today() ? S.streak : S.lastFlight === yest ? S.streak + 1 : 1;
+  S.lastFlight = today();
+  setAirport(dest);
+  chime([72, 76, 79, 84]);
+  const task = f.task >= 0 ? S.tasks[f.task] : null;
+  modal(`<h2>🛬 Welcome to ${esc(dest.city)}</h2><p>${GREET[dest.cc] || "Welcome"}! You focused for <b>${f.minutes} minutes</b> and flew <b>${km.toLocaleString()} km</b>.</p>
+    <div class="stamps"><div class="stamp" style="--r:-8deg;color:${stampColor(dest.iata)}">${dest.iata}</div></div>
+    ${task && !task.done ? `<p>Did <b>${esc(task.text)}</b> depart?</p><div class="row"><button class="btn go" id="l-done">Yes, it's done ✓</button><button class="btn" id="l-not">Not yet</button></div>` : ""}
+    <div class="row"><button class="btn" id="l-break">5 min layover (break)</button><button class="btn" onclick="closeModal()">Explore ${esc(dest.city)}</button></div>`, () => {
+    if ($("#l-done")) { $("#l-done").onclick = () => { task.done = true; store.save(); chime([76, 79]); $("#l-done").parentElement.innerHTML = "<span class='muted'>Departed ✓ Nice work.</span>"; }; $("#l-not").onclick = () => { $("#l-not").parentElement.remove(); }; }
+    $("#l-break").onclick = () => { layover = Date.now() + 5 * 60000; closeModal(); toast("Layover started. Stretch, grab water, look out the window."); };
+  });
+  store.save();
+}
+let layover = 0;
+const stampColor = (iata) => ["#ffb547", "#5aa9ff", "#ef6f6c", "#6ee7a8", "#c792ea", "#5eead4"][hashStr(iata) % 6];
+function openPassport() {
+  const uniq = [...new Map(S.stamps.map((s) => [s.iata, s])).values()];
+  const h = Math.floor(S.minutes / 60), m = S.minutes % 60;
+  modal(`<h2>🛂 Passport · ${esc(S.name || "Traveller")}</h2><p class="muted">Home ${S.home || "—"} · now in ${airport.city}</p>
+    <div class="stats"><div><b>${h}h ${m}m</b>focus time</div><div><b>${S.flights}</b>flights</div><div><b>${S.km.toLocaleString()}</b>km flown</div><div><b>${S.streak || 0}</b>day streak</div></div>
+    <h3>Stamps</h3><div class="stamps">${uniq.length ? uniq.map((s) => `<div class="stamp" title="${BY_IATA[s.iata]?.city} · ${s.date}" style="--r:${(hashStr(s.iata) % 30) - 15}deg;color:${stampColor(s.iata)}">${s.iata}</div>`).join("") : '<span class="muted">Finish a focus flight at Gate A7 to get your first stamp.</span>'}</div>
+    <h3>Secrets found · ${S.secrets.length}/${Object.keys(SECRETS).length}</h3><div class="secrets">${Object.entries(SECRETS).map(([k, v]) => `<span>${S.secrets.includes(k) ? v : "❔ ???"}</span>`).join("")}</div>
+    <div class="row"><button class="btn" id="pp-move">Change airport</button><button class="btn" onclick="closeModal()">Close</button></div>`, () => {
+    $("#pp-move").onclick = () => openSplash();
+  });
+}
+function openSound() {
+  modal(`<h2>♪ Sound</h2><p class="muted">The music is generated live, so it never repeats.</p>
+    <label class="slider">Music <input type="range" id="v-music" min="0" max="1" step="0.05" value="${S.music}"></label>
+    <label class="slider">Ambience <input type="range" id="v-amb" min="0" max="1" step="0.05" value="${S.amb}"></label>
+    <h3>Station</h3><div class="row">${["auto", "lounge", "sunrise", "night", "rain"].map((m) => `<button class="btn ${(S.mood || "auto") === m ? "sel" : ""}" data-mood="${m}">${m === "auto" ? "Auto (time & weather)" : MOODS[m].name.split("· ")[1]}</button>`).join("")}</div>
+    <div class="row"><button class="btn" id="v-mute">${muted ? "Unmute" : "Mute"}</button><button class="btn" onclick="closeModal()">Close</button></div>`, () => {
+    audioInit();
+    $("#v-music").oninput = (e) => { S.music = +e.target.value; setVolumes(); store.save(); };
+    $("#v-amb").oninput = (e) => { S.amb = +e.target.value; setVolumes(); store.save(); };
+    document.querySelectorAll("[data-mood]").forEach((b) => b.onclick = () => { S.mood = b.dataset.mood === "auto" ? "" : b.dataset.mood; store.save(); openSound(); });
+    $("#v-mute").onclick = () => { toggleMute(); openSound(); };
+  });
+}
+function openHelp() {
+  modal(`<h2>How the lounge works</h2>
+    <p><kbd>← →</kbd> or <kbd>A</kbd><kbd>D</kbd> walk, or click where you want to go</p>
+    <p><kbd>E</kbd> use whatever you're standing next to</p>
+    <p><kbd>B</kbd> departures board (your tasks) · <kbd>P</kbd> passport · <kbd>M</kbd> mute</p>
+    <p><kbd>H</kbd> hide everything and just enjoy the view · <kbd>F</kbd> fullscreen</p>
+    <p class="muted">Board a focus flight at Gate A7. Stay until it lands to collect a stamp at your destination. Each airport hides a few surprises, and they change every day.</p>
+    <div class="row"><button class="btn" onclick="closeModal()">Got it</button></div>`);
+}
+
+// ---------------------------------------------------------------- easter eggs
+function secret(k) {
+  if (S.secrets.includes(k)) return;
+  S.secrets.push(k); store.save();
+  setTimeout(() => toast(`Secret found: ${SECRETS[k]}  (${S.secrets.length}/${Object.keys(SECRETS).length})`, 4200), 400);
+}
+let pianoOpen = false, pianoSeq = [];
+const KEYMAP = { a: 60, w: 61, s: 62, e: 63, d: 64, f: 65, t: 66, g: 67, y: 68, h: 69, u: 70, j: 71, k: 72, o: 73, l: 74, p: 75, ";": 76, "'": 77 };
+function openPiano() {
+  const whites = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77], blacks = [[61, 0], [63, 1], [66, 3], [68, 4], [70, 5], [73, 7], [75, 8]];
+  const keyName = (m) => Object.keys(KEYMAP).find((k) => KEYMAP[k] === m) || "";
+  modal(`<h2>🎹 The lounge piano</h2><p class="muted">Click the keys, or play with your keyboard (A S D F G H J K L for white keys, W E T Y U O P for black).</p>
+    <div class="piano" id="pno">${whites.map((m) => `<div class="wk" data-n="${m}">${keyName(m).toUpperCase()}</div>`).join("")}
+    ${blacks.map(([m, i]) => `<div class="bk" data-n="${m}" style="left:calc(${(i + 1) * 100 / whites.length}% - 3%)">${keyName(m).toUpperCase()}</div>`).join("")}</div>
+    <div class="row"><button class="btn" id="pno-song">♪ Play something calm</button><button class="btn" onclick="closeModal()">Close</button></div>`, () => {
+    pianoOpen = true;
+    document.querySelectorAll("#pno [data-n]").forEach((el) => el.addEventListener("pointerdown", (e) => { e.preventDefault(); press(+el.dataset.n); }));
+    $("#pno-song").onclick = playSong;
+  });
+  secret("piano");
+}
+function press(n) {
+  pianoNote(n);
+  const el = document.querySelector(`#pno [data-n="${n}"]`);
+  if (el) { el.classList.add("down"); setTimeout(() => el.classList.remove("down"), 180); }
+  const p = scene.objects.find((o) => o.kind === "piano"); if (p) p.t = 1.5;
+  pianoSeq = [...pianoSeq, n].slice(-4);
+  if (pianoSeq.join() === "60,64,67,72") { secret("chord"); setTimeout(() => { chime([72, 76, 79, 84]); toast("📻 Tower: \"Lovely playing. Cleared for a perfect day.\"", 4500); }, 700); pianoSeq = []; }
+}
+function playSong() {
+  // an original little tune
+  const tune = [[64, 0], [67, 0.5], [72, 1], [71, 1.75], [67, 2.25], [69, 3], [67, 3.5], [64, 4], [62, 5], [64, 5.5], [65, 6], [64, 6.75], [60, 7.25], [62, 8], [55, 8], [64, 9], [60, 9], [67, 10]];
+  tune.forEach(([n, b]) => setTimeout(() => { if (pianoOpen) press(n); }, b * 420));
+}
+function petCat() {
+  const cat = scene.objects.find((o) => o.kind === "cat");
+  for (let i = 0; i < 5; i++) parts.push({ x: cat.x + 14 + Math.random() * 6, y: 134, vx: (Math.random() - 0.5) * 6, vy: -8 - Math.random() * 6, life: 1.6, kind: "heart" });
+  audioInit();
+  if (A.ctx) { const t = A.ctx.currentTime; for (let i = 0; i < 6; i++) voice(55 + Math.random() * 4, t + i * 0.18, 0.1, { type: "sawtooth", gain: 0.02, attack: 0.05, release: 0.12, dest: A.sfx, verb: 0, cutoff: 260 }); }
+  toast(`${cat.name} purrs happily.`);
+  secret("cat");
+}
+const FORTUNES = ["Small steps make long runways.", "The best view comes after the hardest climb.", "Today's delay is tomorrow's tailwind.",
+  "Pack light: one task at a time.", "Every expert was once a passenger.", "Clear skies follow focused hours.", "You are exactly where your gate is.",
+  "Take off before you feel ready.", "A calm cabin starts with a calm pilot.", "Finish the flight. Then enjoy the landing.",
+  "Your future self is waiting at arrivals.", "Turbulence passes. It always does.", "Ten quiet minutes beat an hour of noise.",
+  "Fuel up: water, snack, deep breath.", "Somewhere, someone is proud of your progress."];
+function vend() {
+  const snack = pick(Math.random, ["🍫 a chocolate bar", "🥨 pretzels", "🧃 a juice box", "🍪 a cookie", "🥜 peanuts"]);
+  chime([79, 74]);
+  modal(`<h2>🥤 Vending machine</h2><p>Out drops ${snack}, wrapped in a tiny note:</p><p class="big">“${pick(Math.random, FORTUNES)}”</p><div class="row"><button class="btn" onclick="closeModal()">Thanks</button></div>`);
+  secret("vending");
+}
+function suitcase() {
+  const owner = pick(Math.random, ["a pilot from Gate B4", "a tired student", "a grandmother flying to see her grandkids", "a band's drummer", "a very relieved tourist"]);
+  scene.objects = scene.objects.filter((o) => o.kind !== "suitcase");
+  for (let i = 0; i < 12; i++) parts.push({ x: player.x + (Math.random() - 0.5) * 16, y: 140, vx: (Math.random() - 0.5) * 20, vy: -10 - Math.random() * 10, life: 1.4, kind: "spark" });
+  chime([72, 79, 84]);
+  toast(`You returned the lost suitcase to ${owner}. They wave thank you!`, 4500);
+  secret("suitcase");
+}
+function brewCoffee() {
+  S.coffee = true; store.save(); updateBanner();
+  for (let i = 0; i < 8; i++) parts.push({ x: player.x, y: 130, vx: (Math.random() - 0.5) * 3, vy: -6, life: 2.5, kind: "steam" });
+  toast("☕ Fresh coffee. Your next focus flight earns +10% miles.");
+  secret("coffee");
+}
+function throwPlane() {
+  paperPlanes.push({ x: player.x, y0: 128, y: 128, t: 0, dir: player.dir });
+  toast("Whoosh!");
+  secret("plane");
+}
+function tuneRadio() {
+  const order = ["", "lounge", "sunrise", "night", "rain"];
+  S.mood = order[(order.indexOf(S.mood) + 1) % order.length]; store.save();
+  audioInit();
+  for (let i = 0; i < 3; i++) parts.push({ x: 948, y: 132, vx: (Math.random() - 0.5) * 6, vy: -9, life: 2, kind: "note" });
+  toast(`📻 ${S.mood ? MOODS[S.mood].name : "Auto: music follows " + airport.city + "'s time and weather"}`);
+  secret("radio");
+}
+
+// ---------------------------------------------------------------- weather
+async function fetchWeather() {
+  const a = airport;
+  try {
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${a.lat}&longitude=${a.lon}&current=temperature_2m,weather_code`);
+    const j = await r.json();
+    if (a !== airport) return;
+    weather = { code: j.current.weather_code, temp: j.current.temperature_2m };
+  } catch { weather = { code: 0, temp: null }; }
+  updateBanner(); applyWeatherSound();
+}
+
+// ======================================================================= input
+const keys = {};
+let zen = false;
+function nearestObject() {
+  let best = null, bd = 18;
+  for (const o of scene.objects) { if (!o.act) continue; const d = Math.abs(player.x - (o.x + o.w / 2)) - o.w / 2; if (d < bd) { bd = d; best = o; } }
+  return best;
+}
+function interact() { if (S.flight) return; const o = nearestObject(); if (o) o.act(); }
+addEventListener("keydown", (e) => {
+  if (splashOpen) return;
+  const k = e.key.toLowerCase();
+  if ($("#modal").classList.contains("open")) {
+    if (k === "escape") closeModal();
+    else if (pianoOpen && KEYMAP[k] !== undefined && !e.repeat) press(KEYMAP[k]);
+    return;
+  }
+  if (e.target.tagName === "INPUT") return;
+  keys[k] = true;
+  audioInit();
+  if (k === "e" || k === "enter" || k === " ") { e.preventDefault(); interact(); }
+  else if (k === "b" && !S.flight) openBoard();
+  else if (k === "p") openPassport();
+  else if (k === "m") toggleMute();
+  else if (k === "h") toggleZen();
+  else if (k === "f") toggleFull();
+  else if (k === "?" || k === "/") openHelp();
+});
+addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
+cv.addEventListener("pointerdown", (e) => {
+  audioInit();
+  if (S.flight || splashOpen) return;
+  const rect = cv.getBoundingClientRect();
+  const sx = (e.clientX - rect.left) / rect.width * W, sy = (e.clientY - rect.top) / rect.height * H;
+  const wx = sx + cam;
+  const hit = scene.objects.find((o) => o.act && wx >= o.x - 4 && wx <= o.x + o.w + 4 && sy > 10);
+  player.tx = hit ? clamp(hit.x + hit.w / 2, 10, WORLD - 10) : clamp(wx, 10, WORLD - 10);
+  player.after = hit || null;
+});
+function toggleZen() { zen = !zen; $("#hud").classList.toggle("hidden", zen); if (zen) toast("Focus view. Press H to bring things back.", 2500); }
+function toggleFull() { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.(); }
+$("#t-board").onclick = () => !S.flight && openBoard();
+$("#t-passport").onclick = openPassport;
+$("#t-sound").onclick = openSound;
+$("#t-zen").onclick = toggleZen;
+$("#t-full").onclick = toggleFull;
+$("#t-help").onclick = openHelp;
+
+// ======================================================================= loop
+let now = performance.now(), last = now, acc = 0, announceAt = performance.now() + 60000 + Math.random() * 60000;
+function resize() {
+  // the view is always 180 pixels tall; its width follows the window so pixels stay square
+  W = clamp(Math.round(H * innerWidth / innerHeight), 240, 560);
+  cv.width = W; cv.height = H;
+  ctx.imageSmoothingEnabled = false;
+}
+function frame(t) {
+  requestAnimationFrame(frame);
+  now = t;
+  const dt = Math.min(0.05, (t - last) / 1000);
+  acc += dt;
+  if (acc < 1 / 30) return;
+  const step = acc; acc = 0; last = t;
+  if (!airport || !scene) return;
+  hour = localHour(airport); light = dayLight(hour);
+  if (S.flight) { $("#prompt").style.display = "none"; drawCabin(step); flashFx(); updateFlightBar(); return; }
+  updateFlightBar();
+  // move the player
+  let mv = (keys.arrowright || keys.d ? 1 : 0) - (keys.arrowleft || keys.a ? 1 : 0);
+  if (mv) player.tx = null;
+  else if (player.tx != null) { const d = player.tx - player.x; if (Math.abs(d) < 2) { player.tx = null; if (player.after) { const o = player.after; player.after = null; o.act(); } } else mv = Math.sign(d); }
+  if (mv) { player.x = clamp(player.x + mv * 62 * step, 6, WORLD - 6); player.dir = mv; player.walk += step; player.frame = Math.floor(player.walk * 8); }
+  cam = clamp(player.x - W / 2, 0, WORLD - W);
+  drawSky(cam); drawHorizon(cam); drawPlanes(cam, step); drawWeather(); drawInterior(cam);
+  const sprites = [];
+  for (const o of scene.objects) sprites.push([o.kind === "board" || o.kind === "gate" ? 0 : 150, () => drawObject(o, cam)]);
+  for (const n of npcs) {
+    n.x += n.v * step; n.frame = Math.floor(now / 160);
+    sprites.push([n.y, () => person(n.x - cam, n.y, n.look, n.frame, Math.sign(n.v), n.bag)]);
+  }
+  npcs = npcs.filter((n) => n.x > -40 && n.x < WORLD + 40);
+  while (npcs.length < 4) npcs.push(newNpc());
+  sprites.push([166, () => person(player.x - cam, 166, S.look, mv ? player.frame : 0, player.dir, false)]);
+  sprites.sort((a, b) => a[0] - b[0]).forEach(([, f]) => f());
+  drawParts(cam, step);
+  if (light < 0.35) { ctx.globalAlpha = 0.12; R(0, 0, W, H, "#0a0e2a"); ctx.globalAlpha = 1; }
+  flashFx();
+  // prompt
+  const o = nearestObject(), pr = $("#prompt");
+  if (o && !$("#modal").classList.contains("open")) { pr.innerHTML = `<kbd>E</kbd>${o.label}`; pr.style.display = "block"; } else pr.style.display = "none";
+  if (layover) { const left = layover - Date.now(); if (left <= 0) { layover = 0; chime([72, 79]); toast("Layover over. Ready for the next flight?"); } else if (Math.floor(left / 1000) % 60 === 0 && Math.floor(left / 1000) !== 0 && Math.random() < 0.03) toast(`Layover: ${Math.ceil(left / 60000)} min left`); }
+  if (now > announceAt) { announceAt = now + 120000 + Math.random() * 120000; announce(); }
+  if (Math.floor(now / 30000) !== frame.lastBanner) { frame.lastBanner = Math.floor(now / 30000); updateBanner(); }
+}
+function flashFx() { if (flash > 0) { ctx.globalAlpha = flash * 0.6; R(0, 0, W, H, "#fff"); ctx.globalAlpha = 1; flash -= 0.08; } }
+function announce() {
+  if (S.flight || $("#modal").classList.contains("open")) return;
+  const dest = pick(Math.random, AIRPORTS.filter((a) => a !== airport));
+  const lines = [`Flight AY${100 + Math.floor(Math.random() * 900)} to ${dest.city} is now boarding at gate ${"ABC"[Math.floor(Math.random() * 3)]}${1 + Math.floor(Math.random() * 12)}.`,
+    S.name ? `Passenger ${S.name}, your focus flight is ready at Gate A7.` : "Focus flights are boarding at Gate A7.",
+    `The local time in ${airport.city} is ${localTime(airport)}. Thank you for flying Ayrport.`,
+    "Please keep your belongings with you, and remember to drink some water."];
+  chime([72, 76, 79]);
+  toast("🔔 " + pick(Math.random, lines), 5500);
+}
+
+// ======================================================================= start
+(function init() {
+  addEventListener("resize", resize); resize();
+  airport = airport || guessFromTimezone();
+  S.at = airport.iata;
+  buildScene(); updateBanner(); fetchWeather();
+  if (S.flight) toast("Welcome back — your flight is still in the air.");
+  openSplash();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -87,6 +87,9 @@ def _rewrite_statement(stmt: list[Token]) -> list[Token]:
         return stmt
     first = stmt[sig[0]]
     nxt = stmt[sig[1]] if len(sig) > 1 else None
+    if len(sig) == 2 and first.is_name("hela") and nxt.is_name("onboard"):
+        call = '__import__("ayrport._lounge")._lounge.board()'
+        return stmt[:sig[0]] + [Token(NAME, call, first.line)] + stmt[sig[1] + 1:]
     if first.is_name("pa") and not (nxt and nxt.is_op(*_NOT_A_STATEMENT)):
         return _rewrite_pa(stmt, sig)
     if first.is_name("load") and nxt is not None and not nxt.is_op(*_NOT_A_STATEMENT):
