@@ -147,13 +147,13 @@ Python library.
 
 The [`vscode-extension`](vscode-extension) folder holds the Ayrport extension:
 syntax highlighting, hover cards that explain every word, completions,
-snippets, auto-indent, and a ▶ **Run** button (F5).
+snippets, auto-indent, red underlines on errors, and a ▶ **Run** button (F5). Ayrport is bundled inside it, so it only needs Python.
 
-**Install:** download `ayrport-1.2.0.vsix` from the
+**Install:** download `ayrport-1.3.0.vsix` from the
 [latest release](https://github.com/megazron/ayrport/releases/latest), then
 
 ```bash
-code --install-extension ayrport-1.2.0.vsix
+code --install-extension ayrport-1.3.0.vsix
 ```
 
 or in VS Code: *Extensions → ⋯ → Install from VSIX…*

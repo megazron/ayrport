@@ -7,3 +7,4 @@ dist/
 .pytest_cache/
 node_modules/
 *.vsix
+vscode-extension/python/ayrport/

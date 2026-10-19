@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.0
+- Works out of the box: Ayrport is bundled inside the extension, so only Python is needed (no `pip install`, no PATH setup)
+- Finds Python automatically (the Python extension's interpreter, then `py`, `python3`, `python`), or set `ayrport.pythonPath`
+- Runs programs directly in their own terminal, so `checkin` (input) works
+- Red underline on the line with a syntax error when you open or save a file
+- ▶ Run in the status bar, the editor title, the right-click menu and the file explorer; F5 or Ctrl+F5
+
 ## 1.2.0
 - Vocabulary reworked so every word behaves like what it means: `check` (if), `issue` (return),
   `shuttle` (while), `gate` (with), `checkin` (input)
