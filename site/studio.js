@@ -307,7 +307,7 @@ function toast(text) {
 
 // ---------------------------------------------------------------- runner
 
-let worker = null, ready = false, running = false, pendingRun = false;
+let worker = null, ready = false, running = false, pendingRun = false, loungeOpened = false;
 let controlled = Promise.resolve(false);
 
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
@@ -342,7 +342,7 @@ function handle(msg) {
     case "out": print(msg.text); break;
     case "err": print(msg.text, "err"); break;
     case "input": ask(msg.id, msg.prompt); break;
-    case "lounge": openLounge(); break;
+    case "lounge": loungeOpened = true; openLounge(); break;
     case "done": finish(msg.ok, msg.line); break;
   }
 }
@@ -358,6 +358,7 @@ function run() {
   if (!ready) { pendingRun = true; status("Boarding Python… your program will run in a moment", "busy"); return; }
   clearOutput();
   markError(0);
+  loungeOpened = false;
   setRunning(true);
   status("In flight…", "busy");
   worker.postMessage({ type: "run", code: ta.value });
@@ -368,7 +369,7 @@ function finish(ok, line) {
   out.querySelectorAll(".ask").forEach((a) => a.remove());
   if (ok) {
     status("Landed ✓", "ok");
-    if (!outputText.trim()) print("(The program ran but announced nothing. Use pa to announce something.)\n", "sys");
+    if (!outputText.trim() && !loungeOpened) print("(The program ran but announced nothing. Use pa to announce something.)\n", "sys");
     chime([783.99, 659.25]);
   } else {
     status(line ? `Mayday on line ${line}` : "Mayday", "bad");

@@ -106,5 +106,6 @@ def test_vscode_words_match_language():
     assert json.loads(words.read_text(encoding="utf-8")) == MEANINGS
 
 
-def test_hela_onboard_statement():
-    assert transpile("hela onboard") == '__import__("ayrport._lounge")._lounge.board()'
+@pytest.mark.parametrize("src", ["hela onboard", "Hela Onboard", "HELA ONBOARD!", "hela onboard()", "  hela  onboard  # go"])
+def test_hela_onboard_statement(src):
+    assert '__import__("ayrport._lounge")._lounge.board()' in transpile(src)

@@ -87,14 +87,22 @@ def _rewrite_statement(stmt: list[Token]) -> list[Token]:
         return stmt
     first = stmt[sig[0]]
     nxt = stmt[sig[1]] if len(sig) > 1 else None
-    if len(sig) == 2 and first.is_name("hela") and nxt.is_name("onboard"):
+    if _is_boarding_call(stmt, sig):
         call = '__import__("ayrport._lounge")._lounge.board()'
-        return stmt[:sig[0]] + [Token(NAME, call, first.line)] + stmt[sig[1] + 1:]
+        return stmt[:sig[0]] + [Token(NAME, call, first.line)] + stmt[_body_end(stmt, sig) + 1:]
     if first.is_name("pa") and not (nxt and nxt.is_op(*_NOT_A_STATEMENT)):
         return _rewrite_pa(stmt, sig)
     if first.is_name("load") and nxt is not None and not nxt.is_op(*_NOT_A_STATEMENT):
         return _rewrite_load(stmt, sig)
     return stmt
+
+
+def _is_boarding_call(stmt: list[Token], sig: list[int]) -> bool:
+    words = [stmt[i].text for i in sig]
+    if words and words[-1] == ";":
+        words = words[:-1]
+    return (len(words) >= 2 and [w.lower() for w in words[:2]] == ["hela", "onboard"]
+            and words[2:] in ([], ["!"], ["(", ")"], ["(", ")", "!"]))
 
 
 def _body_end(stmt: list[Token], sig: list[int]) -> int:
